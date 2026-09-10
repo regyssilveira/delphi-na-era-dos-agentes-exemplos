@@ -19,7 +19,15 @@ O repositório demonstrará uma camada de negócio que pode ser exposta com segu
 
 ## Status
 
-Em preparação. A primeira versão executável será publicada junto aos capítulos iniciais do livro.
+O marco inicial já cria um banco SQLite com dados fictícios e demonstra o ponto de partida para a camada de serviços do ERP. O servidor MCP será introduzido na próxima entrega.
+
+## Executar o marco inicial
+
+1. Abra `src/TechStoreERP.dpr` no Delphi 13 Florence.
+2. Compile e execute o projeto como aplicação de console.
+3. O banco `techstore.db` será criado em `Documentos\TechStoreERP`, com clientes, produtos e notas fictícios.
+
+O projeto usa somente Delphi e bibliotecas fornecidas pelo Delphi: FireDAC e o driver SQLite. Nenhum dado, credencial ou documento fiscal real é utilizado.
 
 ## Licença
 

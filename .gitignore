@@ -9,6 +9,7 @@ __recovery/
 *.tvsconfig
 *.rsm
 *.dsk
+*.exe
 Win32/
 Win64/
 Android/
