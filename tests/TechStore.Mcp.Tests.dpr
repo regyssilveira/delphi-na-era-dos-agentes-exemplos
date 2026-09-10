@@ -5,7 +5,8 @@ program TechStoreMcpTests;
 uses
   System.SysUtils,
   TechStore.Data in '..\src\TechStore.Data.pas',
-  TechStore.Mcp in '..\src\TechStore.Mcp.pas';
+  TechStore.Mcp in '..\src\TechStore.Mcp.pas',
+  TechStore.Mcp.LocalClient in '..\src\TechStore.Mcp.LocalClient.pas';
 
 procedure Require(const ACondition: Boolean; const AMessage: string);
 begin
@@ -23,6 +24,7 @@ procedure Run;
 var
   Database: TTechStoreDatabase;
   Server: TTechStoreMcpServer;
+  Client: TTechStoreMcpLocalClient;
   Response: string;
 begin
   Database := TTechStoreDatabase.Create;
@@ -71,6 +73,18 @@ begin
 
       Response := Server.ProcessLine('não é JSON');
       RequireContains(Response, '"code":-32700');
+
+      Client := TTechStoreMcpLocalClient.Create(Server);
+      try
+        Client.Initialize;
+        RequireContains(Client.ListTools(), 'consultar_estoque_baixo');
+        RequireContains(Client.ListResources(),
+          'techstore://policies/operation-classification');
+        RequireContains(Client.GetPrompt('analisar_estoque_baixo'),
+          'consultar_estoque_baixo');
+      finally
+        Client.Free;
+      end;
     finally
       Server.Free;
     end;
