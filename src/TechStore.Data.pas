@@ -5,11 +5,13 @@ interface
 uses
   System.SysUtils,
   System.IOUtils,
+  System.JSON,
   FireDAC.Stan.Def,
   FireDAC.Stan.Async,
   FireDAC.Stan.Intf,
   FireDAC.Stan.Option,
   FireDAC.Stan.Error,
+  FireDAC.DApt,
   FireDAC.Comp.Client,
   FireDAC.Phys.SQLite;
 
@@ -25,6 +27,7 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure Initialize;
+    function ListLowStock: TJSONArray;
     property DatabaseFileName: string read FDatabaseFileName;
   end;
 
@@ -101,6 +104,43 @@ begin
     'INSERT OR IGNORE INTO invoices (id, customer_id, issued_at, total_amount) VALUES ' +
     '(1, 1, ''2026-09-01'', 8450.00), ' +
     '(2, 2, ''2026-09-05'', 18342.57)');
+end;
+
+function TTechStoreDatabase.ListLowStock: TJSONArray;
+var
+  Query: TFDQuery;
+  Product: TJSONObject;
+begin
+  Result := TJSONArray.Create;
+  try
+    Query := TFDQuery.Create(nil);
+    try
+      Query.Connection := FConnection;
+      Query.SQL.Text :=
+        'SELECT id, name, stock_quantity, minimum_stock ' +
+        'FROM products ' +
+        'WHERE stock_quantity < minimum_stock ' +
+        'ORDER BY name';
+      Query.Open;
+      while not Query.Eof do
+      begin
+        Product := TJSONObject.Create;
+        Product.AddPair('id', TJSONNumber.Create(Query.FieldByName('id').AsInteger));
+        Product.AddPair('name', Query.FieldByName('name').AsString);
+        Product.AddPair('stockQuantity',
+          TJSONNumber.Create(Query.FieldByName('stock_quantity').AsFloat));
+        Product.AddPair('minimumStock',
+          TJSONNumber.Create(Query.FieldByName('minimum_stock').AsFloat));
+        Result.AddElement(Product);
+        Query.Next;
+      end;
+    finally
+      Query.Free;
+    end;
+  except
+    Result.Free;
+    raise;
+  end;
 end;
 
 end.

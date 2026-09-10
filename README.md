@@ -29,6 +29,12 @@ O marco inicial já cria um banco SQLite com dados fictícios e demonstra o pont
 
 O projeto usa somente Delphi e bibliotecas fornecidas pelo Delphi: FireDAC e o driver SQLite. Nenhum dado, credencial ou documento fiscal real é utilizado.
 
+## Servidor MCP didático
+
+Execute `TechStoreERP.exe --mcp-stdio` para iniciar o perfil MCP local. Cada linha recebida em `stdin` deve conter uma mensagem JSON-RPC; cada resposta é escrita em `stdout`. Os diagnósticos não devem ser enviados a `stdout`.
+
+O núcleo atual suporta `initialize`, `tools/list` e `tools/call`, com a ferramenta de leitura `consultar_estoque_baixo`. Ele é um perfil didático, não uma implementação completa do MCP nem um servidor de rede.
+
 ## Relação com o livro
 
 O livro principal mantém um recorte de 200 a 260 páginas e apresenta apenas os trechos de código necessários para compreender cada decisão. Este repositório reúne o código integral, versões executáveis e extensões progressivas.
