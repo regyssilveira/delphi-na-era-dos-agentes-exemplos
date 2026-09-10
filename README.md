@@ -33,7 +33,11 @@ O projeto usa somente Delphi e bibliotecas fornecidas pelo Delphi: FireDAC e o d
 
 Execute `TechStoreERP.exe --mcp-stdio` para iniciar o perfil MCP local. Cada linha recebida em `stdin` deve conter uma mensagem JSON-RPC; cada resposta é escrita em `stdout`. Os diagnósticos não devem ser enviados a `stdout`.
 
-O núcleo atual suporta `initialize`, `tools/list` e `tools/call`, com a ferramenta de leitura `consultar_estoque_baixo`. Ele é um perfil didático, não uma implementação completa do MCP nem um servidor de rede.
+O núcleo atual suporta `initialize`, `notifications/initialized`, `tools/list` e `tools/call`, com a ferramenta de leitura `consultar_estoque_baixo`. Após receber `initialize`, o cliente deve enviar a notificação de inicialização antes de chamar uma ferramenta. Ele é um perfil didático, não uma implementação completa do MCP nem um servidor de rede.
+
+### Testes do núcleo MCP
+
+Abra e execute `tests/TechStore.Mcp.Tests.dpr` no Delphi. O programa verifica o ciclo de inicialização, a descoberta da ferramenta, a chamada de consulta e o tratamento de JSON inválido. Os testes usam somente unidades fornecidas pelo Delphi e os dados fictícios do projeto.
 
 ## Relação com o livro
 

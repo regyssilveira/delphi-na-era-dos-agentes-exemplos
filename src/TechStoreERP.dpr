@@ -11,6 +11,7 @@ var
   Database: TTechStoreDatabase;
   Server: TTechStoreMcpServer;
   Line: string;
+  Response: string;
 begin
   try
     Database := TTechStoreDatabase.Create;
@@ -24,7 +25,11 @@ begin
           begin
             ReadLn(Line);
             if Line.Trim <> '' then
-              Writeln(Server.ProcessLine(Line));
+            begin
+              Response := Server.ProcessLine(Line);
+              if Response <> '' then
+                Writeln(Response);
+            end;
           end;
         finally
           Server.Free;

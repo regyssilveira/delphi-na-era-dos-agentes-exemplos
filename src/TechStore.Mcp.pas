@@ -9,6 +9,7 @@ type
   TTechStoreMcpServer = class
   private
     FDatabase: TTechStoreDatabase;
+    FInitialized: Boolean;
     function ErrorResponse(const AId, ACode, AMessage: string): string;
     function HandleInitialize(const AId: string): string;
     function HandleToolsList(const AId: string): string;
@@ -93,22 +94,40 @@ var
   IdValue: TJSONValue;
   ParamsValue: TJSONValue;
   Id: string;
+  IsNotification: Boolean;
 begin
   Request := TJSONObject.ParseJSONValue(ALine) as TJSONObject;
   try
     if Request = nil then
       Exit(ErrorResponse('null', '-32700', 'JSON inválido.'));
     IdValue := Request.GetValue('id');
-    if IdValue = nil then
+    IsNotification := IdValue = nil;
+    if IsNotification then
       Id := 'null'
     else
       Id := IdValue.ToJSON;
     MethodValue := Request.GetValue('method');
     if MethodValue = nil then
+    begin
+      if IsNotification then
+        Exit('');
       Exit(ErrorResponse(Id, '-32600', 'Método ausente.'));
+    end;
+
+    if SameText(MethodValue.Value, 'notifications/initialized') then
+    begin
+      FInitialized := True;
+      Exit('');
+    end;
+
+    if IsNotification then
+      Exit('');
 
     if SameText(MethodValue.Value, 'initialize') then
       Exit(HandleInitialize(Id));
+    if not FInitialized then
+      Exit(ErrorResponse(Id, '-32002',
+        'O cliente deve enviar notifications/initialized antes desta chamada.'));
     if SameText(MethodValue.Value, 'tools/list') then
       Exit(HandleToolsList(Id));
     if SameText(MethodValue.Value, 'tools/call') then
