@@ -29,6 +29,17 @@ O marco inicial já cria um banco SQLite com dados fictícios e demonstra o pont
 
 O projeto usa somente Delphi e bibliotecas fornecidas pelo Delphi: FireDAC e o driver SQLite. Nenhum dado, credencial ou documento fiscal real é utilizado.
 
+## Relação com o livro
+
+O livro principal mantém um recorte de 200 a 260 páginas e apresenta apenas os trechos de código necessários para compreender cada decisão. Este repositório reúne o código integral, versões executáveis e extensões progressivas.
+
+Evoluções previstas após o núcleo MCP com `stdio`:
+
+- Streamable HTTP;
+- autenticação, autorização e auditoria de rede;
+- suporte a múltiplos clientes, streaming e cancelamento;
+- implantação e observabilidade distribuída.
+
 ## Licença
 
 Este projeto é distribuído sob a [Apache License 2.0](LICENSE).
