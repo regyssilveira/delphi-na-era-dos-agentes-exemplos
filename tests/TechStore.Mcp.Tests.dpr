@@ -34,6 +34,8 @@ begin
         '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}');
       RequireContains(Response, '"protocolVersion":"2026-07-28"');
       RequireContains(Response, '"tools":{}');
+      RequireContains(Response, '"resources":{}');
+      RequireContains(Response, '"prompts":{}');
 
       Response := Server.ProcessLine(
         '{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}');
@@ -48,6 +50,24 @@ begin
         '"params":{"name":"consultar_estoque_baixo","arguments":{}}}');
       RequireContains(Response, '"isError":false');
       RequireContains(Response, 'Mouse Orbital');
+
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":4,"method":"resources/list","params":{}}');
+      RequireContains(Response, 'techstore://policies/operation-classification');
+
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":5,"method":"resources/read",' +
+        '"params":{"uri":"techstore://policies/operation-classification"}}');
+      RequireContains(Response, 'techstore://policies/operation-classification');
+
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":6,"method":"prompts/list","params":{}}');
+      RequireContains(Response, 'analisar_estoque_baixo');
+
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":7,"method":"prompts/get",' +
+        '"params":{"name":"analisar_estoque_baixo"}}');
+      RequireContains(Response, 'consultar_estoque_baixo');
 
       Response := Server.ProcessLine('não é JSON');
       RequireContains(Response, '"code":-32700');
