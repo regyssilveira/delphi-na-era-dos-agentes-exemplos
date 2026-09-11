@@ -103,6 +103,20 @@ begin
       RequireContains(Response, '"code":-32602');
 
       Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":35,"method":"tools/call",' +
+        '"params":{"name":"criar_orcamento","arguments":{' +
+        '"customerId":1,"productId":2,"quantity":20}}}');
+      RequireContains(Response, '"isError":false');
+      RequireContains(Response, 'PREPARADO');
+      RequireContains(Response, 'requiresHumanApproval');
+
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":36,"method":"tools/call",' +
+        '"params":{"name":"criar_orcamento","arguments":{' +
+        '"customerId":1,"productId":2,"quantity":0}}}');
+      RequireContains(Response, '"code":-32602');
+
+      Response := Server.ProcessLine(
         '{"jsonrpc":"2.0","id":4,"method":"resources/list","params":{}}');
       RequireContains(Response, 'techstore://policies/operation-classification');
 
