@@ -86,6 +86,23 @@ begin
       RequireContains(Response, 'encontrado.');
 
       Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":32,"method":"tools/call",' +
+        '"params":{"name":"consultar_cliente","arguments":{"id":1}}}');
+      RequireContains(Response, '"isError":false');
+      RequireContains(Response, 'Ana Martins');
+
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":33,"method":"tools/call",' +
+        '"params":{"name":"consultar_produto","arguments":{"id":2}}}');
+      RequireContains(Response, '"isError":false');
+      RequireContains(Response, 'Mouse Orbital');
+
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":34,"method":"tools/call",' +
+        '"params":{"name":"consultar_produto","arguments":{"id":0}}}');
+      RequireContains(Response, '"code":-32602');
+
+      Response := Server.ProcessLine(
         '{"jsonrpc":"2.0","id":4,"method":"resources/list","params":{}}');
       RequireContains(Response, 'techstore://policies/operation-classification');
 
