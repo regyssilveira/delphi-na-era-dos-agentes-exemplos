@@ -14,6 +14,8 @@ type
     FServices: TTechStoreServices;
     FInitialized: Boolean;
     function ErrorResponse(const AId, ACode, AMessage: string): string;
+    function TryGetInteger(const AObject: TJSONObject; const AName: string;
+      out AValue: Integer): Boolean;
     function HandleInitialize(const AId: string): string;
     function HandleToolsList(const AId: string): string;
     function HandleToolsCall(const AId: string; const AParamsJson: string): string;
@@ -51,6 +53,16 @@ begin
   Result := Format(
     '{"jsonrpc":"2.0","id":%s,"error":{"code":%s,"message":%s}}',
     [AId, ACode, TJSONString.Create(AMessage).ToJSON]);
+end;
+
+function TTechStoreMcpServer.TryGetInteger(const AObject: TJSONObject;
+  const AName: string; out AValue: Integer): Boolean;
+var
+  Value: TJSONValue;
+begin
+  Value := AObject.GetValue(AName);
+  Result := (Value is TJSONNumber) and
+    TryStrToInt(TJSONNumber(Value).Value, AValue);
 end;
 
 function TTechStoreMcpServer.HandleInitialize(const AId: string): string;
@@ -172,12 +184,13 @@ var
   Params: TJSONObject;
   NameValue: TJSONValue;
   ArgumentsValue: TJSONValue;
-  IdValue: TJSONValue;
-  ProductIdValue: TJSONValue;
-  QuantityValue: TJSONValue;
   Data: TJSONArray;
   ObjectData: TJSONObject;
   Content: string;
+  CustomerId: Integer;
+  ProductId: Integer;
+  Quantity: Integer;
+  EntityId: Integer;
 begin
   Params := TJSONObject.ParseJSONValue(AParamsJson) as TJSONObject;
   try
@@ -197,28 +210,22 @@ begin
           Exit(ErrorResponse(AId, '-32602', 'Arguments deve ser um objeto JSON.'));
         if SameText(NameValue.Value, 'criar_orcamento') then
         begin
-          IdValue := TJSONObject(ArgumentsValue).GetValue('customerId');
-          if (IdValue = nil) or not (IdValue is TJSONNumber) then
+          if not TryGetInteger(TJSONObject(ArgumentsValue), 'customerId', CustomerId) then
             Exit(ErrorResponse(AId, '-32602', 'Arguments.customerId deve ser inteiro.'));
-          ProductIdValue := TJSONObject(ArgumentsValue).GetValue('productId');
-          if (ProductIdValue = nil) or not (ProductIdValue is TJSONNumber) then
+          if not TryGetInteger(TJSONObject(ArgumentsValue), 'productId', ProductId) then
             Exit(ErrorResponse(AId, '-32602', 'Arguments.productId deve ser inteiro.'));
-          QuantityValue := TJSONObject(ArgumentsValue).GetValue('quantity');
-          if (QuantityValue = nil) or not (QuantityValue is TJSONNumber) then
+          if not TryGetInteger(TJSONObject(ArgumentsValue), 'quantity', Quantity) then
             Exit(ErrorResponse(AId, '-32602', 'Arguments.quantity deve ser inteiro.'));
-          ObjectData := FServices.PrepareQuote(TJSONNumber(IdValue).AsInt,
-            TJSONNumber(ProductIdValue).AsInt,
-            TJSONNumber(QuantityValue).AsInt);
+          ObjectData := FServices.PrepareQuote(CustomerId, ProductId, Quantity);
         end
         else
         begin
-          IdValue := TJSONObject(ArgumentsValue).GetValue('id');
-          if (IdValue = nil) or not (IdValue is TJSONNumber) then
+          if not TryGetInteger(TJSONObject(ArgumentsValue), 'id', EntityId) then
             Exit(ErrorResponse(AId, '-32602', 'Arguments.id deve ser inteiro.'));
           if SameText(NameValue.Value, 'consultar_cliente') then
-            ObjectData := FServices.ConsultCustomer(TJSONNumber(IdValue).AsInt)
+            ObjectData := FServices.ConsultCustomer(EntityId)
           else
-            ObjectData := FServices.ConsultProduct(TJSONNumber(IdValue).AsInt);
+            ObjectData := FServices.ConsultProduct(EntityId);
         end;
         try
           Exit(ToolResult(AId, ObjectData));
