@@ -28,6 +28,8 @@ type
     destructor Destroy; override;
     procedure Initialize;
     function ListLowStock: TJSONArray;
+    function FindCustomerById(const AId: Integer): TJSONObject;
+    function FindProductById(const AId: Integer): TJSONObject;
     property DatabaseFileName: string read FDatabaseFileName;
   end;
 
@@ -44,6 +46,58 @@ begin
   FConnection.LoginPrompt := False;
   FConnection.DriverName := 'SQLite';
   FConnection.Params.Values['Database'] := FDatabaseFileName;
+end;
+
+function TTechStoreDatabase.FindCustomerById(const AId: Integer): TJSONObject;
+var
+  Query: TFDQuery;
+begin
+  Result := nil;
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FConnection;
+    Query.SQL.Text :=
+      'SELECT id, name, credit_limit FROM customers WHERE id = :id';
+    Query.ParamByName('id').AsInteger := AId;
+    Query.Open;
+    if not Query.IsEmpty then
+    begin
+      Result := TJSONObject.Create;
+      Result.AddPair('id', TJSONNumber.Create(Query.FieldByName('id').AsInteger));
+      Result.AddPair('name', Query.FieldByName('name').AsString);
+      Result.AddPair('creditLimit',
+        TJSONNumber.Create(Query.FieldByName('credit_limit').AsFloat));
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
+function TTechStoreDatabase.FindProductById(const AId: Integer): TJSONObject;
+var
+  Query: TFDQuery;
+begin
+  Result := nil;
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FConnection;
+    Query.SQL.Text :=
+      'SELECT id, name, stock_quantity, minimum_stock FROM products WHERE id = :id';
+    Query.ParamByName('id').AsInteger := AId;
+    Query.Open;
+    if not Query.IsEmpty then
+    begin
+      Result := TJSONObject.Create;
+      Result.AddPair('id', TJSONNumber.Create(Query.FieldByName('id').AsInteger));
+      Result.AddPair('name', Query.FieldByName('name').AsString);
+      Result.AddPair('stockQuantity',
+        TJSONNumber.Create(Query.FieldByName('stock_quantity').AsFloat));
+      Result.AddPair('minimumStock',
+        TJSONNumber.Create(Query.FieldByName('minimum_stock').AsFloat));
+    end;
+  finally
+    Query.Free;
+  end;
 end;
 
 destructor TTechStoreDatabase.Destroy;

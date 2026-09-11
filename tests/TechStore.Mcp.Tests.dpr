@@ -5,6 +5,7 @@ program TechStoreMcpTests;
 uses
   System.SysUtils,
   TechStore.Data in '..\src\TechStore.Data.pas',
+  TechStore.Services in '..\src\TechStore.Services.pas',
   TechStore.Mcp in '..\src\TechStore.Mcp.pas',
   TechStore.Mcp.LocalClient in '..\src\TechStore.Mcp.LocalClient.pas';
 
@@ -25,11 +26,21 @@ var
   Database: TTechStoreDatabase;
   Server: TTechStoreMcpServer;
   Client: TTechStoreMcpLocalClient;
+  Services: TTechStoreServices;
   Response: string;
 begin
   Database := TTechStoreDatabase.Create;
   try
     Database.Initialize;
+    Services := TTechStoreServices.Create(Database);
+    try
+      Response := Services.ConsultCustomer(1).ToJSON;
+      RequireContains(Response, 'Ana Martins');
+      Response := Services.ConsultProduct(2).ToJSON;
+      RequireContains(Response, 'Mouse Orbital');
+    finally
+      Services.Free;
+    end;
     Server := TTechStoreMcpServer.Create(Database);
     try
       Response := Server.ProcessLine(
