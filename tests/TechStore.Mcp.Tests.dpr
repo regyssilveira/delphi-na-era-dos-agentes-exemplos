@@ -108,6 +108,12 @@ begin
       RequireContains(Response, '"code":-32602');
 
       Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":342,"method":"tools/call",' +
+        '"params":{"name":"consultar_produto","arguments":{' +
+        '"id":2,"unexpected":true}}}');
+      RequireContains(Response, '"code":-32602');
+
+      Response := Server.ProcessLine(
         '{"jsonrpc":"2.0","id":35,"method":"tools/call",' +
         '"params":{"name":"criar_orcamento","arguments":{' +
         '"customerId":1,"productId":2,"quantity":20}}}');
@@ -125,6 +131,12 @@ begin
         '{"jsonrpc":"2.0","id":361,"method":"tools/call",' +
         '"params":{"name":"criar_orcamento","arguments":{' +
         '"customerId":1,"productId":2,"quantity":1.5}}}');
+      RequireContains(Response, '"code":-32602');
+
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":362,"method":"tools/call",' +
+        '"params":{"name":"criar_orcamento","arguments":{' +
+        '"customerId":1,"productId":2,"quantity":1,"unexpected":true}}}');
       RequireContains(Response, '"code":-32602');
 
       Response := Server.ProcessLine(

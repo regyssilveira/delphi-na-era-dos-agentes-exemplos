@@ -16,6 +16,8 @@ type
     function ErrorResponse(const AId, ACode, AMessage: string): string;
     function TryGetInteger(const AObject: TJSONObject; const AName: string;
       out AValue: Integer): Boolean;
+    function HasOnlyArguments(const AObject: TJSONObject;
+      const AAllowed: array of string): Boolean;
     function HandleInitialize(const AId: string): string;
     function HandleToolsList(const AId: string): string;
     function HandleToolsCall(const AId: string; const AParamsJson: string): string;
@@ -63,6 +65,28 @@ begin
   Value := AObject.GetValue(AName);
   Result := (Value is TJSONNumber) and
     TryStrToInt(TJSONNumber(Value).Value, AValue);
+end;
+
+function TTechStoreMcpServer.HasOnlyArguments(const AObject: TJSONObject;
+  const AAllowed: array of string): Boolean;
+var
+  Index: Integer;
+  AllowedName: string;
+  IsAllowed: Boolean;
+begin
+  Result := True;
+  for Index := 0 to AObject.Count - 1 do
+  begin
+    IsAllowed := False;
+    for AllowedName in AAllowed do
+      if SameText(AObject.Pairs[Index].JsonString.Value, AllowedName) then
+      begin
+        IsAllowed := True;
+        Break;
+      end;
+    if not IsAllowed then
+      Exit(False);
+  end;
 end;
 
 function TTechStoreMcpServer.HandleInitialize(const AId: string): string;
@@ -210,6 +234,9 @@ begin
           Exit(ErrorResponse(AId, '-32602', 'Arguments deve ser um objeto JSON.'));
         if SameText(NameValue.Value, 'criar_orcamento') then
         begin
+          if not HasOnlyArguments(TJSONObject(ArgumentsValue),
+            ['customerId', 'productId', 'quantity']) then
+            Exit(ErrorResponse(AId, '-32602', 'Arguments contém propriedades não permitidas.'));
           if not TryGetInteger(TJSONObject(ArgumentsValue), 'customerId', CustomerId) then
             Exit(ErrorResponse(AId, '-32602', 'Arguments.customerId deve ser inteiro.'));
           if not TryGetInteger(TJSONObject(ArgumentsValue), 'productId', ProductId) then
@@ -220,6 +247,8 @@ begin
         end
         else
         begin
+          if not HasOnlyArguments(TJSONObject(ArgumentsValue), ['id']) then
+            Exit(ErrorResponse(AId, '-32602', 'Arguments contém propriedades não permitidas.'));
           if not TryGetInteger(TJSONObject(ArgumentsValue), 'id', EntityId) then
             Exit(ErrorResponse(AId, '-32602', 'Arguments.id deve ser inteiro.'));
           if SameText(NameValue.Value, 'consultar_cliente') then
@@ -236,6 +265,12 @@ begin
 
       if not SameText(NameValue.Value, 'consultar_estoque_baixo') then
         Exit(ErrorResponse(AId, '-32601', 'Ferramenta não encontrada.'));
+
+      ArgumentsValue := Params.GetValue('arguments');
+      if (ArgumentsValue <> nil) and
+         ((not (ArgumentsValue is TJSONObject)) or
+          (not HasOnlyArguments(TJSONObject(ArgumentsValue), []))) then
+        Exit(ErrorResponse(AId, '-32602', 'Arguments contém propriedades não permitidas.'));
 
       Data := FServices.ConsultLowStock;
       try
