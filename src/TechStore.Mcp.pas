@@ -72,6 +72,11 @@ begin
     '{"name":"consultar_produto","description":"Retorna o produto pelo identificador.",' +
     '"inputSchema":{"type":"object","properties":{"id":{"type":"integer"}},' +
     '"required":["id"],"additionalProperties":false}},' +
+    '{"name":"criar_orcamento","description":"Prepara uma cotação que exige aprovação humana.",' +
+    '"inputSchema":{"type":"object","properties":{' +
+    '"customerId":{"type":"integer"},"productId":{"type":"integer"},' +
+    '"quantity":{"type":"integer"}},"required":["customerId","productId","quantity"],' +
+    '"additionalProperties":false}},' +
     '{"name":"consultar_estoque_baixo",' +
     '"description":"Retorna produtos cujo saldo está abaixo do estoque mínimo.",' +
     '"inputSchema":{"type":"object","additionalProperties":false}}]}}', [AId]);
@@ -181,18 +186,31 @@ begin
       Exit(ErrorResponse(AId, '-32601', 'Ferramenta não encontrada.'));
 
     if SameText(NameValue.Value, 'consultar_cliente') or
-       SameText(NameValue.Value, 'consultar_produto') then
+       SameText(NameValue.Value, 'consultar_produto') or
+       SameText(NameValue.Value, 'criar_orcamento') then
     begin
       ArgumentsValue := Params.GetValue('arguments');
       if not (ArgumentsValue is TJSONObject) then
         Exit(ErrorResponse(AId, '-32602', 'Arguments deve ser um objeto JSON.'));
-      IdValue := TJSONObject(ArgumentsValue).GetValue('id');
-      if (IdValue = nil) or not (IdValue is TJSONNumber) then
-        Exit(ErrorResponse(AId, '-32602', 'Arguments.id deve ser inteiro.'));
-      if SameText(NameValue.Value, 'consultar_cliente') then
-        ObjectData := FServices.ConsultCustomer(TJSONNumber(IdValue).AsInt)
+      if SameText(NameValue.Value, 'criar_orcamento') then
+      begin
+        IdValue := TJSONObject(ArgumentsValue).GetValue('customerId');
+        if (IdValue = nil) or not (IdValue is TJSONNumber) then
+          Exit(ErrorResponse(AId, '-32602', 'Arguments.customerId deve ser inteiro.'));
+        ObjectData := FServices.PrepareQuote(TJSONNumber(IdValue).AsInt,
+          TJSONNumber(TJSONObject(ArgumentsValue).GetValue('productId')).AsInt,
+          TJSONNumber(TJSONObject(ArgumentsValue).GetValue('quantity')).AsInt);
+      end
       else
-        ObjectData := FServices.ConsultProduct(TJSONNumber(IdValue).AsInt);
+      begin
+        IdValue := TJSONObject(ArgumentsValue).GetValue('id');
+        if (IdValue = nil) or not (IdValue is TJSONNumber) then
+          Exit(ErrorResponse(AId, '-32602', 'Arguments.id deve ser inteiro.'));
+        if SameText(NameValue.Value, 'consultar_cliente') then
+          ObjectData := FServices.ConsultCustomer(TJSONNumber(IdValue).AsInt)
+        else
+          ObjectData := FServices.ConsultProduct(TJSONNumber(IdValue).AsInt);
+      end;
       try
         Exit(ToolResult(AId, ObjectData));
       finally
