@@ -173,6 +173,8 @@ var
   NameValue: TJSONValue;
   ArgumentsValue: TJSONValue;
   IdValue: TJSONValue;
+  ProductIdValue: TJSONValue;
+  QuantityValue: TJSONValue;
   Data: TJSONArray;
   ObjectData: TJSONObject;
   Content: string;
@@ -197,9 +199,15 @@ begin
         IdValue := TJSONObject(ArgumentsValue).GetValue('customerId');
         if (IdValue = nil) or not (IdValue is TJSONNumber) then
           Exit(ErrorResponse(AId, '-32602', 'Arguments.customerId deve ser inteiro.'));
+        ProductIdValue := TJSONObject(ArgumentsValue).GetValue('productId');
+        if (ProductIdValue = nil) or not (ProductIdValue is TJSONNumber) then
+          Exit(ErrorResponse(AId, '-32602', 'Arguments.productId deve ser inteiro.'));
+        QuantityValue := TJSONObject(ArgumentsValue).GetValue('quantity');
+        if (QuantityValue = nil) or not (QuantityValue is TJSONNumber) then
+          Exit(ErrorResponse(AId, '-32602', 'Arguments.quantity deve ser inteiro.'));
         ObjectData := FServices.PrepareQuote(TJSONNumber(IdValue).AsInt,
-          TJSONNumber(TJSONObject(ArgumentsValue).GetValue('productId')).AsInt,
-          TJSONNumber(TJSONObject(ArgumentsValue).GetValue('quantity')).AsInt);
+          TJSONNumber(ProductIdValue).AsInt,
+          TJSONNumber(QuantityValue).AsInt);
       end
       else
       begin
