@@ -3,36 +3,47 @@ unit TechStore.Mcp;
 interface
 
 uses
-  TechStore.Data;
+  System.JSON,
+  TechStore.Data,
+  TechStore.Services;
 
 type
   TTechStoreMcpServer = class
   private
     FDatabase: TTechStoreDatabase;
+    FServices: TTechStoreServices;
     FInitialized: Boolean;
     function ErrorResponse(const AId, ACode, AMessage: string): string;
     function HandleInitialize(const AId: string): string;
     function HandleToolsList(const AId: string): string;
     function HandleToolsCall(const AId: string; const AParamsJson: string): string;
+    function ToolResult(const AId: string; const AData: TJSONValue): string;
     function HandleResourcesList(const AId: string): string;
     function HandleResourcesRead(const AId, AParamsJson: string): string;
     function HandlePromptsList(const AId: string): string;
     function HandlePromptsGet(const AId, AParamsJson: string): string;
   public
     constructor Create(ADatabase: TTechStoreDatabase);
+    destructor Destroy; override;
     function ProcessLine(const ALine: string): string;
   end;
 
 implementation
 
 uses
-  System.JSON,
   System.SysUtils;
 
 constructor TTechStoreMcpServer.Create(ADatabase: TTechStoreDatabase);
 begin
   inherited Create;
   FDatabase := ADatabase;
+  FServices := TTechStoreServices.Create(FDatabase);
+end;
+
+destructor TTechStoreMcpServer.Destroy;
+begin
+  FServices.Free;
+  inherited Destroy;
 end;
 
 function TTechStoreMcpServer.ErrorResponse(const AId, ACode, AMessage: string): string;
@@ -55,9 +66,24 @@ function TTechStoreMcpServer.HandleToolsList(const AId: string): string;
 begin
   Result := Format(
     '{"jsonrpc":"2.0","id":%s,"result":{"tools":[' +
+    '{"name":"consultar_cliente","description":"Retorna o cliente pelo identificador.",' +
+    '"inputSchema":{"type":"object","properties":{"id":{"type":"integer"}},' +
+    '"required":["id"],"additionalProperties":false}},' +
+    '{"name":"consultar_produto","description":"Retorna o produto pelo identificador.",' +
+    '"inputSchema":{"type":"object","properties":{"id":{"type":"integer"}},' +
+    '"required":["id"],"additionalProperties":false}},' +
     '{"name":"consultar_estoque_baixo",' +
     '"description":"Retorna produtos cujo saldo está abaixo do estoque mínimo.",' +
     '"inputSchema":{"type":"object","additionalProperties":false}}]}}', [AId]);
+end;
+
+function TTechStoreMcpServer.ToolResult(const AId: string;
+  const AData: TJSONValue): string;
+begin
+  Result := Format(
+    '{"jsonrpc":"2.0","id":%s,"result":{"content":[{' +
+    '"type":"text","text":%s}],"isError":false}}',
+    [AId, TJSONString.Create(AData.ToJSON).ToJSON]);
 end;
 
 function TTechStoreMcpServer.HandleResourcesList(const AId: string): string;
@@ -140,7 +166,10 @@ function TTechStoreMcpServer.HandleToolsCall(const AId: string;
 var
   Params: TJSONObject;
   NameValue: TJSONValue;
+  ArgumentsValue: TJSONValue;
+  IdValue: TJSONValue;
   Data: TJSONArray;
+  ObjectData: TJSONObject;
   Content: string;
 begin
   Params := TJSONObject.ParseJSONValue(AParamsJson) as TJSONObject;
@@ -148,10 +177,33 @@ begin
     if Params = nil then
       Exit(ErrorResponse(AId, '-32602', 'Os parâmetros devem ser um objeto JSON.'));
     NameValue := Params.GetValue('name');
-    if (NameValue = nil) or not SameText(NameValue.Value, 'consultar_estoque_baixo') then
+    if NameValue = nil then
       Exit(ErrorResponse(AId, '-32601', 'Ferramenta não encontrada.'));
 
-    Data := FDatabase.ListLowStock;
+    if SameText(NameValue.Value, 'consultar_cliente') or
+       SameText(NameValue.Value, 'consultar_produto') then
+    begin
+      ArgumentsValue := Params.GetValue('arguments');
+      if not (ArgumentsValue is TJSONObject) then
+        Exit(ErrorResponse(AId, '-32602', 'Arguments deve ser um objeto JSON.'));
+      IdValue := TJSONObject(ArgumentsValue).GetValue('id');
+      if (IdValue = nil) or not (IdValue is TJSONNumber) then
+        Exit(ErrorResponse(AId, '-32602', 'Arguments.id deve ser inteiro.'));
+      if SameText(NameValue.Value, 'consultar_cliente') then
+        ObjectData := FServices.ConsultCustomer(TJSONNumber(IdValue).AsInt)
+      else
+        ObjectData := FServices.ConsultProduct(TJSONNumber(IdValue).AsInt);
+      try
+        Exit(ToolResult(AId, ObjectData));
+      finally
+        ObjectData.Free;
+      end;
+    end;
+
+    if not SameText(NameValue.Value, 'consultar_estoque_baixo') then
+      Exit(ErrorResponse(AId, '-32601', 'Ferramenta não encontrada.'));
+
+    Data := FServices.ConsultLowStock;
     try
       Content := Data.ToJSON;
       Result := Format(
