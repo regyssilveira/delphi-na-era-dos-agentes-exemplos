@@ -30,6 +30,7 @@ type
     function ListLowStock: TJSONArray;
     function FindCustomerById(const AId: Integer): TJSONObject;
     function FindProductById(const AId: Integer): TJSONObject;
+    function CreateQuoteDraft(const ACustomerId, AProductId, AQuantity: Integer): Integer;
     property DatabaseFileName: string read FDatabaseFileName;
   end;
 
@@ -46,6 +47,29 @@ begin
   FConnection.LoginPrompt := False;
   FConnection.DriverName := 'SQLite';
   FConnection.Params.Values['Database'] := FDatabaseFileName;
+end;
+
+function TTechStoreDatabase.CreateQuoteDraft(const ACustomerId, AProductId,
+  AQuantity: Integer): Integer;
+var
+  Query: TFDQuery;
+begin
+  Query := TFDQuery.Create(nil);
+  try
+    Query.Connection := FConnection;
+    Query.SQL.Text :=
+      'INSERT INTO quote_drafts (customer_id, product_id, quantity, status) ' +
+      'VALUES (:customer_id, :product_id, :quantity, ''PREPARADO'')';
+    Query.ParamByName('customer_id').AsInteger := ACustomerId;
+    Query.ParamByName('product_id').AsInteger := AProductId;
+    Query.ParamByName('quantity').AsInteger := AQuantity;
+    Query.ExecSQL;
+    Query.SQL.Text := 'SELECT last_insert_rowid() AS id';
+    Query.Open;
+    Result := Query.FieldByName('id').AsInteger;
+  finally
+    Query.Free;
+  end;
 end;
 
 function TTechStoreDatabase.FindCustomerById(const AId: Integer): TJSONObject;
@@ -138,6 +162,17 @@ begin
     '  issued_at TEXT NOT NULL, ' +
     '  total_amount NUMERIC NOT NULL, ' +
     '  FOREIGN KEY(customer_id) REFERENCES customers(id)' +
+    ')');
+
+  FConnection.ExecSQL(
+    'CREATE TABLE IF NOT EXISTS quote_drafts (' +
+    '  id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+    '  customer_id INTEGER NOT NULL, ' +
+    '  product_id INTEGER NOT NULL, ' +
+    '  quantity INTEGER NOT NULL, ' +
+    '  status TEXT NOT NULL, ' +
+    '  FOREIGN KEY(customer_id) REFERENCES customers(id), ' +
+    '  FOREIGN KEY(product_id) REFERENCES products(id)' +
     ')');
 end;
 
