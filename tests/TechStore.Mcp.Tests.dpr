@@ -80,6 +80,12 @@ begin
       RequireContains(Response, 'Mouse Orbital');
 
       Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":31,"method":"tools/call",' +
+        '"params":{"name":"consultar_cliente","arguments":{"id":999}}}');
+      RequireContains(Response, '"code":-32602');
+      RequireContains(Response, 'encontrado.');
+
+      Response := Server.ProcessLine(
         '{"jsonrpc":"2.0","id":4,"method":"resources/list","params":{}}');
       RequireContains(Response, 'techstore://policies/operation-classification');
 

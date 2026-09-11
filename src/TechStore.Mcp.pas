@@ -181,63 +181,68 @@ var
 begin
   Params := TJSONObject.ParseJSONValue(AParamsJson) as TJSONObject;
   try
-    if Params = nil then
-      Exit(ErrorResponse(AId, '-32602', 'Os parâmetros devem ser um objeto JSON.'));
-    NameValue := Params.GetValue('name');
-    if NameValue = nil then
-      Exit(ErrorResponse(AId, '-32601', 'Ferramenta não encontrada.'));
-
-    if SameText(NameValue.Value, 'consultar_cliente') or
-       SameText(NameValue.Value, 'consultar_produto') or
-       SameText(NameValue.Value, 'criar_orcamento') then
-    begin
-      ArgumentsValue := Params.GetValue('arguments');
-      if not (ArgumentsValue is TJSONObject) then
-        Exit(ErrorResponse(AId, '-32602', 'Arguments deve ser um objeto JSON.'));
-      if SameText(NameValue.Value, 'criar_orcamento') then
-      begin
-        IdValue := TJSONObject(ArgumentsValue).GetValue('customerId');
-        if (IdValue = nil) or not (IdValue is TJSONNumber) then
-          Exit(ErrorResponse(AId, '-32602', 'Arguments.customerId deve ser inteiro.'));
-        ProductIdValue := TJSONObject(ArgumentsValue).GetValue('productId');
-        if (ProductIdValue = nil) or not (ProductIdValue is TJSONNumber) then
-          Exit(ErrorResponse(AId, '-32602', 'Arguments.productId deve ser inteiro.'));
-        QuantityValue := TJSONObject(ArgumentsValue).GetValue('quantity');
-        if (QuantityValue = nil) or not (QuantityValue is TJSONNumber) then
-          Exit(ErrorResponse(AId, '-32602', 'Arguments.quantity deve ser inteiro.'));
-        ObjectData := FServices.PrepareQuote(TJSONNumber(IdValue).AsInt,
-          TJSONNumber(ProductIdValue).AsInt,
-          TJSONNumber(QuantityValue).AsInt);
-      end
-      else
-      begin
-        IdValue := TJSONObject(ArgumentsValue).GetValue('id');
-        if (IdValue = nil) or not (IdValue is TJSONNumber) then
-          Exit(ErrorResponse(AId, '-32602', 'Arguments.id deve ser inteiro.'));
-        if SameText(NameValue.Value, 'consultar_cliente') then
-          ObjectData := FServices.ConsultCustomer(TJSONNumber(IdValue).AsInt)
-        else
-          ObjectData := FServices.ConsultProduct(TJSONNumber(IdValue).AsInt);
-      end;
-      try
-        Exit(ToolResult(AId, ObjectData));
-      finally
-        ObjectData.Free;
-      end;
-    end;
-
-    if not SameText(NameValue.Value, 'consultar_estoque_baixo') then
-      Exit(ErrorResponse(AId, '-32601', 'Ferramenta não encontrada.'));
-
-    Data := FServices.ConsultLowStock;
     try
-      Content := Data.ToJSON;
-      Result := Format(
-        '{"jsonrpc":"2.0","id":%s,"result":{"content":[' +
-        '{"type":"text","text":%s}],"isError":false}}',
-        [AId, TJSONString.Create(Content).ToJSON]);
-    finally
-      Data.Free;
+      if Params = nil then
+        Exit(ErrorResponse(AId, '-32602', 'Os parâmetros devem ser um objeto JSON.'));
+      NameValue := Params.GetValue('name');
+      if NameValue = nil then
+        Exit(ErrorResponse(AId, '-32601', 'Ferramenta não encontrada.'));
+
+      if SameText(NameValue.Value, 'consultar_cliente') or
+         SameText(NameValue.Value, 'consultar_produto') or
+         SameText(NameValue.Value, 'criar_orcamento') then
+      begin
+        ArgumentsValue := Params.GetValue('arguments');
+        if not (ArgumentsValue is TJSONObject) then
+          Exit(ErrorResponse(AId, '-32602', 'Arguments deve ser um objeto JSON.'));
+        if SameText(NameValue.Value, 'criar_orcamento') then
+        begin
+          IdValue := TJSONObject(ArgumentsValue).GetValue('customerId');
+          if (IdValue = nil) or not (IdValue is TJSONNumber) then
+            Exit(ErrorResponse(AId, '-32602', 'Arguments.customerId deve ser inteiro.'));
+          ProductIdValue := TJSONObject(ArgumentsValue).GetValue('productId');
+          if (ProductIdValue = nil) or not (ProductIdValue is TJSONNumber) then
+            Exit(ErrorResponse(AId, '-32602', 'Arguments.productId deve ser inteiro.'));
+          QuantityValue := TJSONObject(ArgumentsValue).GetValue('quantity');
+          if (QuantityValue = nil) or not (QuantityValue is TJSONNumber) then
+            Exit(ErrorResponse(AId, '-32602', 'Arguments.quantity deve ser inteiro.'));
+          ObjectData := FServices.PrepareQuote(TJSONNumber(IdValue).AsInt,
+            TJSONNumber(ProductIdValue).AsInt,
+            TJSONNumber(QuantityValue).AsInt);
+        end
+        else
+        begin
+          IdValue := TJSONObject(ArgumentsValue).GetValue('id');
+          if (IdValue = nil) or not (IdValue is TJSONNumber) then
+            Exit(ErrorResponse(AId, '-32602', 'Arguments.id deve ser inteiro.'));
+          if SameText(NameValue.Value, 'consultar_cliente') then
+            ObjectData := FServices.ConsultCustomer(TJSONNumber(IdValue).AsInt)
+          else
+            ObjectData := FServices.ConsultProduct(TJSONNumber(IdValue).AsInt);
+        end;
+        try
+          Exit(ToolResult(AId, ObjectData));
+        finally
+          ObjectData.Free;
+        end;
+      end;
+
+      if not SameText(NameValue.Value, 'consultar_estoque_baixo') then
+        Exit(ErrorResponse(AId, '-32601', 'Ferramenta não encontrada.'));
+
+      Data := FServices.ConsultLowStock;
+      try
+        Content := Data.ToJSON;
+        Result := Format(
+          '{"jsonrpc":"2.0","id":%s,"result":{"content":[' +
+          '{"type":"text","text":%s}],"isError":false}}',
+          [AId, TJSONString.Create(Content).ToJSON]);
+      finally
+        Data.Free;
+      end;
+    except
+      on E: ETechStoreBusinessRule do
+        Result := ErrorResponse(AId, '-32602', E.Message);
     end;
   finally
     Params.Free;
