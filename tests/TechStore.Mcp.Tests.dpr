@@ -59,6 +59,18 @@ begin
     Server := TTechStoreMcpServer.Create(Database);
     try
       Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":0,"method":"tools/list","params":{}}');
+      RequireContains(Response, '"code":-32002');
+
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}');
+      Require(Response = '', 'Notificação não deve gerar resposta JSON-RPC.');
+
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":0,"method":"tools/list","params":{}}');
+      RequireContains(Response, '"code":-32002');
+
+      Response := Server.ProcessLine(
         '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}');
       RequireContains(Response, '"protocolVersion":"2026-07-28"');
       RequireContains(Response, '"tools":{}');

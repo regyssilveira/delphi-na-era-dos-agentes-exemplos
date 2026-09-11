@@ -12,6 +12,7 @@ type
   private
     FDatabase: TTechStoreDatabase;
     FServices: TTechStoreServices;
+    FInitializeRequested: Boolean;
     FInitialized: Boolean;
     function ErrorResponse(const AId, ACode, AMessage: string): string;
     function TryGetInteger(const AObject: TJSONObject; const AName: string;
@@ -91,6 +92,8 @@ end;
 
 function TTechStoreMcpServer.HandleInitialize(const AId: string): string;
 begin
+  FInitializeRequested := True;
+  FInitialized := False;
   Result := Format(
     '{"jsonrpc":"2.0","id":%s,"result":{' +
     '"protocolVersion":"2026-07-28",' +
@@ -324,7 +327,8 @@ begin
 
     if SameText(MethodValue.Value, 'notifications/initialized') then
     begin
-      FInitialized := True;
+      if FInitializeRequested then
+        FInitialized := True;
       Exit('');
     end;
 
