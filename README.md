@@ -40,12 +40,12 @@ O projeto usa somente Delphi e bibliotecas fornecidas pelo Delphi: FireDAC e o d
 
 Execute `TechStoreERP.exe --mcp-stdio` para iniciar o perfil MCP local. Cada linha recebida em `stdin` deve conter uma mensagem JSON-RPC; cada resposta é escrita em `stdout`. Os diagnósticos não devem ser enviados a `stdout`.
 
-O núcleo atual suporta `initialize`, `notifications/initialized`, `tools/list`, `tools/call`, `resources/list`, `resources/read`, `prompts/list` e `prompts/get`. Após receber `initialize`, o cliente deve enviar a notificação de inicialização antes de usar uma capacidade.
+O núcleo atual suporta `initialize`, `notifications/initialized`, `tools/list`, `tools/call`, `resources/list`, `resources/read`, `prompts/list` e `prompts/get`. Após receber `initialize`, o cliente deve enviar a notificação de inicialização antes de usar uma capacidade. O adaptador valida a versão JSON-RPC, o tipo de `method`, identificadores válidos e os argumentos declarados por cada tool; números decimais ou propriedades extras são rejeitados quando o contrato exige inteiros e `additionalProperties: false`.
 
 Exemplo de sequência mínima (uma mensagem por linha):
 
 ```json
-{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"teste","version":"1.0"}}}
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2026-07-28","capabilities":{},"clientInfo":{"name":"teste","version":"1.0"}}}
 {"jsonrpc":"2.0","method":"notifications/initialized"}
 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"criar_orcamento","arguments":{"customerId":1,"productId":2,"quantity":20}}}
 ```
@@ -54,7 +54,7 @@ O resultado da última chamada contém um identificador de orçamento, o estado 
 
 ### Testes
 
-Abra e execute `tests/TechStore.Mcp.Tests.dpr` no Delphi. O programa verifica o ciclo de inicialização, descoberta de capacidades, consultas, recursos, prompts, cliente local didático, regras de negócio, autorização e tratamento de JSON inválido. Os testes usam somente unidades fornecidas pelo Delphi e os dados fictícios do projeto.
+Abra e execute `tests/TechStore.Mcp.Tests.dpr` no Delphi. O programa verifica o ciclo de inicialização, o envelope JSON-RPC, descoberta de capacidades, consultas, recursos, prompts, cliente local didático, regras de negócio, autorização, schemas de argumentos e tratamento de JSON inválido. Os testes usam somente unidades fornecidas pelo Delphi e os dados fictícios do projeto.
 
 ## Limitações assumidas
 
