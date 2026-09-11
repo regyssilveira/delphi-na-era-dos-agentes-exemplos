@@ -28,6 +28,8 @@ O exemplo já cria um banco SQLite com dados fictícios e inclui um servidor MCP
 
 O código separa acesso a dados, regras de negócio, autorização e adaptação MCP. A política de autorização aceita consultas e preparação, mas bloqueia explicitamente ações críticas de confirmação.
 
+Consulte [a matriz de alinhamento com o livro](docs/BOOK_ALIGNMENT.md) para distinguir o que já é executável das arquiteturas e contratos de evolução discutidos nos apêndices.
+
 ## Executar
 
 1. Abra `src/TechStoreERP.dpr` no Delphi 13 Florence.
@@ -40,7 +42,7 @@ O projeto usa somente Delphi e bibliotecas fornecidas pelo Delphi: FireDAC e o d
 
 Execute `TechStoreERP.exe --mcp-stdio` para iniciar o perfil MCP local. Cada linha recebida em `stdin` deve conter uma mensagem JSON-RPC; cada resposta é escrita em `stdout`. Os diagnósticos não devem ser enviados a `stdout`.
 
-O núcleo atual suporta `initialize`, `notifications/initialized`, `tools/list`, `tools/call`, `resources/list`, `resources/read`, `prompts/list` e `prompts/get`. Após receber `initialize`, o cliente deve enviar a notificação de inicialização antes de usar uma capacidade. O adaptador valida a versão JSON-RPC, o tipo de `method`, identificadores válidos e os argumentos declarados por cada tool; números decimais ou propriedades extras são rejeitados quando o contrato exige inteiros e `additionalProperties: false`.
+O núcleo atual suporta `initialize`, `notifications/initialized`, `tools/list`, `tools/call`, `resources/list`, `resources/read`, `prompts/list` e `prompts/get`. Após receber `initialize` com `protocolVersion` `2026-07-28`, o cliente deve enviar a notificação de inicialização antes de usar uma capability. O adaptador valida a versão JSON-RPC, o tipo de `method`, identificadores válidos e os argumentos declarados por cada tool; números decimais ou propriedades extras são rejeitados quando o contrato exige inteiros e `additionalProperties: false`.
 
 Exemplo de sequência mínima (uma mensagem por linha):
 
@@ -51,6 +53,8 @@ Exemplo de sequência mínima (uma mensagem por linha):
 ```
 
 O resultado da última chamada contém um identificador de orçamento, o estado `PREPARADO` e `requiresHumanApproval: true`. Não existe ferramenta para confirmar a operação neste recorte.
+
+Os contratos de evolução apresentados no livro — por exemplo, alertas paginados por categoria, resumo de venda e confirmação idempotente de baixa — ainda não fazem parte do catálogo público. Eles só serão adicionados quando tiverem implementação, política e testes correspondentes.
 
 ### Testes
 

@@ -71,11 +71,18 @@ begin
       RequireContains(Response, '"code":-32002');
 
       Response := Server.ProcessLine(
-        '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}');
+        '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{' +
+        '"protocolVersion":"2026-07-28","capabilities":{},' +
+        '"clientInfo":{"name":"teste","version":"1.0"}}}');
       RequireContains(Response, '"protocolVersion":"2026-07-28"');
       RequireContains(Response, '"tools":{}');
       RequireContains(Response, '"resources":{}');
       RequireContains(Response, '"prompts":{}');
+
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":11,"method":"initialize","params":{' +
+        '"protocolVersion":"incompativel"}}');
+      RequireContains(Response, '"code":-32602');
 
       Response := Server.ProcessLine(
         '{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}');

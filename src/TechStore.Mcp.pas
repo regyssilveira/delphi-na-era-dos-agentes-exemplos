@@ -19,7 +19,7 @@ type
       out AValue: Integer): Boolean;
     function HasOnlyArguments(const AObject: TJSONObject;
       const AAllowed: array of string): Boolean;
-    function HandleInitialize(const AId: string): string;
+    function HandleInitialize(const AId, AParamsJson: string): string;
     function HandleToolsList(const AId: string): string;
     function HandleToolsCall(const AId: string; const AParamsJson: string): string;
     function ToolResult(const AId: string; const AData: TJSONValue): string;
@@ -90,15 +90,30 @@ begin
   end;
 end;
 
-function TTechStoreMcpServer.HandleInitialize(const AId: string): string;
+function TTechStoreMcpServer.HandleInitialize(const AId, AParamsJson: string): string;
+var
+  Params: TJSONObject;
+  ProtocolVersion: TJSONValue;
 begin
-  FInitializeRequested := True;
-  FInitialized := False;
-  Result := Format(
-    '{"jsonrpc":"2.0","id":%s,"result":{' +
-    '"protocolVersion":"2026-07-28",' +
-    '"serverInfo":{"name":"techstore-erp","version":"0.1.0"},' +
-    '"capabilities":{"tools":{},"resources":{},"prompts":{}}}}', [AId]);
+  Params := TJSONObject.ParseJSONValue(AParamsJson) as TJSONObject;
+  try
+    if Params = nil then
+      Exit(ErrorResponse(AId, '-32602', 'Os parâmetros de initialize devem ser um objeto JSON.'));
+    ProtocolVersion := Params.GetValue('protocolVersion');
+    if (ProtocolVersion = nil) or
+       not SameText(ProtocolVersion.Value, '2026-07-28') then
+      Exit(ErrorResponse(AId, '-32602',
+        'O cliente deve informar protocolVersion 2026-07-28.'));
+    FInitializeRequested := True;
+    FInitialized := False;
+    Result := Format(
+      '{"jsonrpc":"2.0","id":%s,"result":{' +
+      '"protocolVersion":"2026-07-28",' +
+      '"serverInfo":{"name":"techstore-erp","version":"0.1.0"},' +
+      '"capabilities":{"tools":{},"resources":{},"prompts":{}}}}', [AId]);
+  finally
+    Params.Free;
+  end;
 end;
 
 function TTechStoreMcpServer.HandleToolsList(const AId: string): string;
@@ -336,7 +351,12 @@ begin
       Exit('');
 
     if SameText(MethodValue.Value, 'initialize') then
-      Exit(HandleInitialize(Id));
+    begin
+      ParamsValue := Request.GetValue('params');
+      if ParamsValue = nil then
+        Exit(ErrorResponse(Id, '-32602', 'Parâmetros ausentes.'));
+      Exit(HandleInitialize(Id, ParamsValue.ToJSON));
+    end;
     if not FInitialized then
       Exit(ErrorResponse(Id, '-32002',
         'O cliente deve enviar notifications/initialized antes desta chamada.'));

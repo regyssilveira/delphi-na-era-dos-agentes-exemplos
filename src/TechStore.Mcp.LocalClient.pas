@@ -50,7 +50,9 @@ end;
 
 procedure TTechStoreMcpLocalClient.Initialize;
 begin
-  Request('initialize', '{}');
+  Request('initialize',
+    '{"protocolVersion":"2026-07-28","capabilities":{},' +
+    '"clientInfo":{"name":"techstore-local-client","version":"0.1.0"}}');
   Notify('notifications/initialized', '{}');
 end;
 
