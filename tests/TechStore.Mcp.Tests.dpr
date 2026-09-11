@@ -6,6 +6,7 @@ uses
   System.SysUtils,
   TechStore.Data in '..\src\TechStore.Data.pas',
   TechStore.Services in '..\src\TechStore.Services.pas',
+  TechStore.Authorization in '..\src\TechStore.Authorization.pas',
   TechStore.Mcp in '..\src\TechStore.Mcp.pas',
   TechStore.Mcp.LocalClient in '..\src\TechStore.Mcp.LocalClient.pas';
 
@@ -27,11 +28,25 @@ var
   Server: TTechStoreMcpServer;
   Client: TTechStoreMcpLocalClient;
   Services: TTechStoreServices;
+  Authorization: TTechStoreAuthorization;
   Response: string;
 begin
   Database := TTechStoreDatabase.Create;
   try
     Database.Initialize;
+    Authorization := TTechStoreAuthorization.Create;
+    try
+      Authorization.RequireAllowed('operador-demo', 'consultar_produto', tsaRead);
+      try
+        Authorization.RequireAllowed('operador-demo', 'confirmar_compra', tsaConfirmCritical);
+        Require(False, 'Confirmação crítica deveria ser bloqueada.');
+      except
+        on E: ETechStoreAuthorization do
+          RequireContains(E.Message, 'aprovação humana');
+      end;
+    finally
+      Authorization.Free;
+    end;
     Services := TTechStoreServices.Create(Database);
     try
       Response := Services.ConsultCustomer(1).ToJSON;
