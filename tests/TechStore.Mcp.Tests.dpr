@@ -74,6 +74,19 @@ begin
       RequireContains(Response, '"consultar_estoque_baixo"');
 
       Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":"request-a","method":"tools/list","params":{}}');
+      RequireContains(Response, '"id":"request-a"');
+
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"1.0","id":21,"method":"tools/list","params":{}}');
+      RequireContains(Response, '"id":null');
+      RequireContains(Response, '"code":-32600');
+
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":22,"method":42,"params":{}}');
+      RequireContains(Response, '"code":-32600');
+
+      Response := Server.ProcessLine(
         '{"jsonrpc":"2.0","id":3,"method":"tools/call",' +
         '"params":{"name":"consultar_estoque_baixo","arguments":{}}}');
       RequireContains(Response, '"isError":false');

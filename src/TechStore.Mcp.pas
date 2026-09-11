@@ -294,6 +294,7 @@ end;
 function TTechStoreMcpServer.ProcessLine(const ALine: string): string;
 var
   Request: TJSONObject;
+  VersionValue: TJSONValue;
   MethodValue: TJSONValue;
   IdValue: TJSONValue;
   ParamsValue: TJSONValue;
@@ -305,18 +306,21 @@ begin
     if Request = nil then
       Exit(ErrorResponse('null', '-32700', 'JSON inválido.'));
     IdValue := Request.GetValue('id');
+    VersionValue := Request.GetValue('jsonrpc');
+    if (VersionValue = nil) or (VersionValue.ClassType <> TJSONString) or
+       not SameText(VersionValue.Value, '2.0') then
+      Exit(ErrorResponse('null', '-32600', 'Versão JSON-RPC inválida.'));
+    if (IdValue <> nil) and not ((IdValue is TJSONString) or
+      (IdValue is TJSONNumber) or (IdValue is TJSONNull)) then
+      Exit(ErrorResponse('null', '-32600', 'Identificador JSON-RPC inválido.'));
     IsNotification := IdValue = nil;
     if IsNotification then
       Id := 'null'
     else
       Id := IdValue.ToJSON;
     MethodValue := Request.GetValue('method');
-    if MethodValue = nil then
-    begin
-      if IsNotification then
-        Exit('');
-      Exit(ErrorResponse(Id, '-32600', 'Método ausente.'));
-    end;
+    if (MethodValue = nil) or (MethodValue.ClassType <> TJSONString) then
+      Exit(ErrorResponse(Id, '-32600', 'Método JSON-RPC inválido.'));
 
     if SameText(MethodValue.Value, 'notifications/initialized') then
     begin
