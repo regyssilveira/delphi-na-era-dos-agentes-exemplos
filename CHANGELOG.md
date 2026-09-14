@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 — 2026-09-14
+
+- transporte `stdio` com leitura e escrita explícitas em UTF-8;
+- teste de processo em Delphi com pipes, texto acentuado e encerramento por EOF;
+- argumento `objetivo` do prompt aplicado à mensagem;
+- roteiro de adaptação a outro ERP, configuração por ambiente e versionamento de contratos.
+
 ## 0.2.0 — 2026-09-14
 
 - migração para MCP `2026-07-28` moderno e sem estado;

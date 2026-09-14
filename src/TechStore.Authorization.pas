@@ -1,4 +1,4 @@
-unit TechStore.Authorization;
+﻿unit TechStore.Authorization;
 
 interface
 

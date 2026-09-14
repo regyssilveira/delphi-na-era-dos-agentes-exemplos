@@ -1,4 +1,4 @@
-unit TechStore.Mcp.LocalClient;
+﻿unit TechStore.Mcp.LocalClient;
 
 interface
 

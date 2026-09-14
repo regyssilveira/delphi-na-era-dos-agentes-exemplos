@@ -1,4 +1,4 @@
-unit TechStore.Mcp;
+﻿unit TechStore.Mcp;
 
 interface
 
@@ -44,7 +44,7 @@ uses
 
 const
   McpProtocolVersion = '2026-07-28';
-  ServerVersion = '0.2.0';
+  ServerVersion = '0.3.0';
 
 constructor TTechStoreMcpServer.Create(ADatabase: TTechStoreDatabase);
 begin
@@ -277,6 +277,8 @@ function TTechStoreMcpServer.HandlePromptsGet(const AId,
 var
   Params: TJSONObject;
   NameValue: TJSONValue;
+  ArgumentsValue, ObjectiveValue: TJSONValue;
+  Objective: string;
 begin
   Params := TJSONObject.ParseJSONValue(AParamsJson) as TJSONObject;
   try
@@ -286,11 +288,30 @@ begin
     if (NameValue = nil) or not SameText(NameValue.Value,
       'analisar_estoque_baixo') then
       Exit(ErrorResponse(AId, '-32602', 'Prompt não encontrado.'));
+    Objective := '';
+    ArgumentsValue := Params.GetValue('arguments');
+    if ArgumentsValue <> nil then
+    begin
+      if not (ArgumentsValue is TJSONObject) then
+        Exit(ErrorResponse(AId, '-32602', 'Arguments deve ser um objeto JSON.'));
+      if not HasOnlyArguments(TJSONObject(ArgumentsValue), ['objetivo']) then
+        Exit(ErrorResponse(AId, '-32602', 'Arguments contém propriedades não permitidas.'));
+      ObjectiveValue := TJSONObject(ArgumentsValue).GetValue('objetivo');
+      if ObjectiveValue <> nil then
+      begin
+        if not (ObjectiveValue is TJSONString) then
+          Exit(ErrorResponse(AId, '-32602', 'Arguments.objetivo deve ser texto.'));
+        Objective := ObjectiveValue.Value;
+      end;
+    end;
+    if Objective <> '' then
+      Objective := ' Objetivo da análise: ' + Objective + '.';
     Result := CompleteResponse(AId,
       '"description":"Análise didática de estoque baixo.","messages":[' +
       '{"role":"user","content":{"type":"text","text":' +
-      '"Consulte consultar_estoque_baixo. Explique os itens encontrados, ' +
-      'priorize o maior desvio em relação ao mínimo e não execute ações externas."}}]');
+      JsonString('Consulte consultar_estoque_baixo. Explique os itens encontrados, ' +
+      'priorize o maior desvio em relação ao mínimo e não execute ações externas.' +
+      Objective) + '}}]');
   finally
     Params.Free;
   end;

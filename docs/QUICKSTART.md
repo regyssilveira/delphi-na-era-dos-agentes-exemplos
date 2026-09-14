@@ -25,9 +25,14 @@ dcc64 -B TechStoreERP.dpr
 cd ..\tests
 dcc64 -B TechStore.Mcp.Tests.dpr
 TechStore.Mcp.Tests.exe
+dcc64 -B TechStore.Mcp.Process.Tests.dpr
+TechStore.Mcp.Process.Tests.exe
 ```
 
-O último comando deve terminar com `Todos os testes MCP passaram.`. O executável do MiniERP
+Os testes devem terminar com `Todos os testes MCP passaram.` e
+`Teste de processo MCP e UTF-8 passou.`. O segundo programa inicia o executável por pipes,
+envia texto acentuado em UTF-8, separa `stdout` de `stderr` e verifica o encerramento após fechar
+`stdin`. O executável do MiniERP
 cria `techstore.db` em `Documentos\TechStoreERP`, contendo somente dados fictícios.
 
 ## Validar com um cliente MCP independente
@@ -73,3 +78,9 @@ argumentos. O processo é local e deve ser encerrado pelo host ao fechar o fluxo
 | O host acusa versão inválida | Confirme suporte ao MCP `2026-07-28`; hosts legados usam o ciclo `initialize`, que este laboratório não implementa. |
 | JSON inválido no host | Garanta UTF-8, uma mensagem JSON-RPC por linha e nenhum log em `stdout`. |
 | Uma ação crítica parece disponível | Interrompa o teste: o exemplo só permite consulta e preparação; não há tool de confirmação. |
+
+## Adapte ao seu ERP
+
+Depois de executar o laboratório, siga [ADAPTAR_AO_ERP.md](ADAPTAR_AO_ERP.md). O roteiro parte de
+uma única consulta existente no sistema do leitor e chega a uma tool testada, com critérios de
+aceite e pontos explícitos para identidade, configuração e operação.

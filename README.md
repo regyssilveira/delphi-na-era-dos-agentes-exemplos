@@ -15,6 +15,7 @@ O repositório demonstrará uma camada de negócio que pode ser exposta com segu
 
 Siga o [laboratório reproduzível](docs/QUICKSTART.md). Ele informa pré-requisitos,
 compilação, testes, validação com um cliente MCP independente e diagnóstico de falhas comuns.
+Para levar uma consulta ao seu sistema, use [o roteiro de adaptação](docs/ADAPTAR_AO_ERP.md).
 
 ## Estado atual
 
@@ -29,7 +30,9 @@ preparação de orçamento abaixo:
 - o recurso `techstore://policies/operation-classification`;
 - o prompt `analisar_estoque_baixo`.
 
-O código separa acesso a dados, regras de negócio, autorização e adaptação MCP. A política de autorização aceita consultas e preparação, mas bloqueia explicitamente ações críticas de confirmação.
+O código separa acesso a dados, regras de negócio e adaptação MCP. A unit de autorização é uma
+demonstração testada diretamente; ela ainda não recebe identidade verificada nem participa do
+despacho MCP. A confirmação crítica não está publicada como tool.
 
 Consulte [a matriz de alinhamento com o livro](docs/BOOK_ALIGNMENT.md) para distinguir o que já é executável das arquiteturas e contratos de evolução discutidos nos apêndices.
 
@@ -65,7 +68,9 @@ Os contratos de evolução apresentados no livro — por exemplo, alertas pagina
 Abra e execute `tests/TechStore.Mcp.Tests.dpr` no Delphi. O programa verifica descoberta,
 metadados por requisição, envelope JSON-RPC, consultas, recursos, prompts, cliente local
 didático, regras de negócio, autorização, schemas de argumentos e tratamento de JSON inválido.
-Os testes usam somente units fornecidas pelo Delphi e os dados fictícios do projeto.
+Compile também `tests/TechStore.Mcp.Process.Tests.dpr` depois do servidor. Ele inicia o
+executável por pipes, verifica UTF-8 bidirecional, `stdout`, `stderr` e encerramento ao fechar
+`stdin`. Os testes usam somente units fornecidas pelo Delphi e os dados fictícios do projeto.
 
 ## Limitações assumidas
 
@@ -74,11 +79,13 @@ Este é um perfil didático, deliberadamente menor que uma implementação MCP d
 - transporte somente local por `stdio`; não há Streamable HTTP, múltiplos clientes, streaming ou cancelamento;
 - não há autenticação de rede, gestão de segredos, persistência de identidade nem trilha de auditoria distribuída;
 - a confirmação de operações críticas está fora do escopo: o exemplo demonstra como bloqueá-la e exigir aprovação humana;
-- a interoperabilidade UTF-8 do transporte de console deve ser validada no ambiente de destino;
+- o adaptador `stdio` e o teste de processo usam UTF-8; a interoperabilidade com o host escolhido ainda deve ser verificada no ambiente de destino;
 - o protocolo evolui: antes de produção, compare as mensagens e capacidades com a especificação MCP vigente.
 
 Consulte também [compatibilidade](docs/COMPATIBILITY.md),
-[segurança](SECURITY.md) e [atualização do protocolo](docs/PROTOCOL_UPGRADE.md).
+[segurança](SECURITY.md), [configuração por ambiente](docs/CONFIGURATION.md),
+[versionamento de contratos](docs/CONTRACT_VERSIONING.md) e
+[atualização do protocolo](docs/PROTOCOL_UPGRADE.md).
 
 ## Relação com o livro
 

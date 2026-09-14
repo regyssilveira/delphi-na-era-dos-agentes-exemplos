@@ -6,13 +6,14 @@ Este repositório é o código executável de **Delphi na Era dos Agentes**. A m
 
 | Tema do livro | Implementação pública |
 |---|---|
-| Servidor MCP nativo Delphi sobre `stdio` | `src/TechStoreERP.dpr` e `src/TechStore.Mcp.pas` |
+| Servidor MCP nativo Delphi sobre `stdio` | `src/TechStoreERP.dpr`, `src/TechStore.Stdio.pas` e `src/TechStore.Mcp.pas` |
 | Descoberta MCP | `server/discover` e metadados `_meta` em cada requisição |
 | Descoberta de capabilities | `tools/list`, `resources/list` e `prompts/list` |
 | Consultas de negócio | `consultar_cliente`, `consultar_produto` e `consultar_estoque_baixo` |
 | Preparação controlada | `criar_orcamento`, que retorna estado `PREPARADO` |
 | Política demonstrativa | `TechStore.Authorization.pas` bloqueia confirmação crítica |
-| Testes reproduzíveis | `tests/TechStore.Mcp.Tests.dpr` |
+| Testes reproduzíveis | `tests/TechStore.Mcp.Tests.dpr` e `tests/TechStore.Mcp.Process.Tests.dpr` |
+| Adaptação a um ERP existente | `docs/ADAPTAR_AO_ERP.md` e Laboratório 6 do livro |
 
 ## Contratos de evolução, ainda não implementados
 

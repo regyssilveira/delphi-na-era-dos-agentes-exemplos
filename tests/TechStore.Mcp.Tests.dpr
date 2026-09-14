@@ -1,4 +1,4 @@
-program TechStoreMcpTests;
+﻿program TechStoreMcpTests;
 
 {$APPTYPE CONSOLE}
 

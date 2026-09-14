@@ -5,7 +5,8 @@ program TechStoreERP;
 uses
   System.SysUtils,
   TechStore.Data in 'TechStore.Data.pas',
-  TechStore.Mcp in 'TechStore.Mcp.pas';
+  TechStore.Mcp in 'TechStore.Mcp.pas',
+  TechStore.Stdio in 'TechStore.Stdio.pas';
 
 var
   Database: TTechStoreDatabase;
@@ -21,14 +22,13 @@ begin
       begin
         Server := TTechStoreMcpServer.Create(Database);
         try
-          while not Eof(Input) do
+          while ReadMcpLine(Line) do
           begin
-            ReadLn(Line);
             if Line.Trim <> '' then
             begin
               Response := Server.ProcessLine(Line);
               if Response <> '' then
-                Writeln(Response);
+                WriteMcpLine(Response);
             end;
           end;
         finally
@@ -43,7 +43,7 @@ begin
   except
     on E: Exception do
     begin
-      Writeln(E.ClassName + ': ' + E.Message);
+      WriteDiagnostic(E.ClassName + ': ' + E.Message);
       ExitCode := 1;
     end;
   end;
