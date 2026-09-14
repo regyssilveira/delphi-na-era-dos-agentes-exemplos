@@ -25,3 +25,4 @@ Linux64/
 *.pem
 *.pfx
 *.log
+docs/inspector.local.json

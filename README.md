@@ -20,7 +20,8 @@ Para levar uma consulta ao seu sistema, use [o roteiro de adaptação](docs/ADAP
 ## Estado atual
 
 O exemplo cria um banco SQLite com dados fictícios e inclui um servidor MCP nativo em Delphi
-sobre `stdio`, no perfil MCP `2026-07-28` moderno e sem estado. O servidor implementa
+sobre `stdio`, no perfil MCP `2026-07-28` moderno e sem estado, com compatibilidade local para
+clientes `2025-11-25`. O servidor implementa
 `server/discover`, descoberta de ferramentas, recursos e prompts, além das consultas e da
 preparação de orçamento abaixo:
 
@@ -51,6 +52,10 @@ O núcleo atual suporta `server/discover`, `tools/list`, `tools/call`, `resource
 JSON-RPC, metadados MCP, tipo de `method`, identificadores válidos e argumentos de cada tool;
 números decimais ou propriedades extras são rejeitados quando o contrato exige inteiros e
 `additionalProperties: false`.
+
+Clientes legados `2025-11-25` podem iniciar com `initialize` e
+`notifications/initialized`. O modo legado fica isolado por processo. O MCP Inspector CLI foi
+testado com listagem e chamada de tool; veja o comando reproduzível no guia rápido.
 
 Exemplo de sequência mínima (uma mensagem por linha):
 

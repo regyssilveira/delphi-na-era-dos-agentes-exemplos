@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "techstore": {
+      "command": "C:\\caminho\\absoluto\\TechStoreERP.exe",
+      "args": ["--mcp-stdio"]
+    }
+  }
+}

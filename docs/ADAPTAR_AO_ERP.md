@@ -54,7 +54,8 @@ cliente independente. O Inspector é ferramenta de verificação, não dependên
 ## 5. Faça o aceite em homologação
 
 Configure o host escolhido com caminho absoluto para o executável e `--mcp-stdio`. Confirme que
-o host suporta a versão MCP anunciada por `server/discover`. Use uma conta e dados de homologação.
+ele usa o perfil moderno anunciado por `server/discover` ou o modo legado `2025-11-25`.
+Use uma conta e dados de homologação.
 Peça a uma pessoa da área de negócio para fazer a pergunta da ficha e conferir o significado do
 resultado, inclusive resposta vazia e negação. Registre versão do executável, ambiente, resultado
 dos testes e decisão de liberar ou corrigir.

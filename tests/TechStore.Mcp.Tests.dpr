@@ -150,6 +150,18 @@ begin
       finally
         Client.Free;
       end;
+
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":30,"method":"initialize","params":{' +
+        '"protocolVersion":"2025-11-25","capabilities":{},' +
+        '"clientInfo":{"name":"teste-legado","version":"1.0"}}}');
+      RequireContains(Response, '"protocolVersion":"2025-11-25"');
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","method":"notifications/initialized"}');
+      Require(Response = '', 'Notificação legada não deve gerar resposta.');
+      Response := Server.ProcessLine(
+        '{"jsonrpc":"2.0","id":31,"method":"tools/list","params":{}}');
+      RequireContains(Response, 'consultar_estoque_baixo');
     finally
       Server.Free;
     end;

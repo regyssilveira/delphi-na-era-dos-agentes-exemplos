@@ -8,11 +8,14 @@ uses
   TechStore.Services;
 
 type
-  { Perfil MCP moderno e sem estado, limitado ao laboratório local do livro. }
+  TLegacyState = (lsNone, lsAwaitInitialized, lsReady);
+
+  { Perfil moderno sem estado com compatibilidade local para clientes 2025-11-25. }
   TTechStoreMcpServer = class
   private
     FDatabase: TTechStoreDatabase;
     FServices: TTechStoreServices;
+    FLegacyState: TLegacyState;
     function ErrorResponse(const AId, ACode, AMessage: string;
       const ADataJson: string = ''): string;
     function CompleteResponse(const AId, AFields: string): string;
@@ -24,6 +27,7 @@ type
     function HasOnlyArguments(const AObject: TJSONObject;
       const AAllowed: array of string): Boolean;
     function HandleDiscover(const AId: string): string;
+    function HandleLegacyInitialize(const AId, AParamsJson: string): string;
     function HandleToolsList(const AId: string): string;
     function HandleToolsCall(const AId, AParamsJson: string): string;
     function ToolResult(const AId: string; const AData: TJSONValue): string;
@@ -44,7 +48,8 @@ uses
 
 const
   McpProtocolVersion = '2026-07-28';
-  ServerVersion = '0.3.0';
+  LegacyProtocolVersion = '2025-11-25';
+  ServerVersion = '0.4.0';
 
 constructor TTechStoreMcpServer.Create(ADatabase: TTechStoreDatabase);
 begin
@@ -185,6 +190,31 @@ begin
     '"instructions":"Servidor MCP local do TechStore. Use somente dados fictícios; ' +
     'criar_orcamento prepara uma minuta e não confirma operações.",' +
     '"ttlMs":300000,"cacheScope":"public"');
+end;
+
+function TTechStoreMcpServer.HandleLegacyInitialize(const AId,
+  AParamsJson: string): string;
+var
+  Params: TJSONObject;
+  VersionValue: TJSONValue;
+begin
+  Params := TJSONObject.ParseJSONValue(AParamsJson) as TJSONObject;
+  try
+    if Params = nil then
+      Exit(ErrorResponse(AId, '-32602', 'Params de initialize deve ser objeto.'));
+    VersionValue := Params.GetValue('protocolVersion');
+    if not (VersionValue is TJSONString) then
+      Exit(ErrorResponse(AId, '-32602', 'protocolVersion ausente.'));
+    FLegacyState := lsAwaitInitialized;
+    Result := Format('{"jsonrpc":"2.0","id":%s,"result":{' +
+      '"protocolVersion":"%s",' +
+      '"capabilities":{"tools":{},"resources":{},"prompts":{}},' +
+      '"serverInfo":{"name":"techstore-erp","version":"%s"},' +
+      '"instructions":"Perfil local de compatibilidade; dados ficticios."}}',
+      [AId, LegacyProtocolVersion, ServerVersion]);
+  finally
+    Params.Free;
+  end;
 end;
 
 function TTechStoreMcpServer.HandleToolsList(const AId: string): string;
@@ -401,6 +431,7 @@ var
   Id, MetaError: string;
   IsNotification: Boolean;
   MetaObject, RequestedVersion: TJSONValue;
+  ParamsJson: string;
 begin
   Request := TJSONObject.ParseJSONValue(ALine) as TJSONObject;
   try
@@ -418,12 +449,41 @@ begin
     if not (MethodValue is TJSONString) then
       Exit(ErrorResponse(Id, '-32600', 'Método JSON-RPC inválido.'));
     ParamsValue := Request.GetValue('params');
-    if not (ParamsValue is TJSONObject) then
+    if SameText(MethodValue.Value, 'initialize') then
     begin
       if IsNotification then Exit('');
-      Exit(ErrorResponse(Id, '-32602', 'Cada requisição MCP deve possuir params com _meta.'));
+      if ParamsValue = nil then
+        Exit(ErrorResponse(Id, '-32602', 'Params de initialize ausente.'));
+      Exit(HandleLegacyInitialize(Id, ParamsValue.ToJSON));
     end;
-    if not ValidateRequestMeta(ParamsValue.ToJSON, MetaError) then
+    if SameText(MethodValue.Value, 'notifications/initialized') and
+      (FLegacyState = lsAwaitInitialized) then
+    begin
+      if not IsNotification then
+        Exit(ErrorResponse(Id, '-32600', 'initialized deve ser notificação.'));
+      FLegacyState := lsReady;
+      Exit('');
+    end;
+    if (FLegacyState = lsReady) and (ParamsValue = nil) then
+      ParamsJson := '{}'
+    else if ParamsValue <> nil then
+      ParamsJson := ParamsValue.ToJSON
+    else
+      ParamsJson := '';
+    if not (ParamsValue is TJSONObject) then
+    begin
+      if (FLegacyState = lsReady) and (ParamsValue = nil) then
+      begin
+        if IsNotification then Exit('');
+      end
+      else
+      begin
+      if IsNotification then Exit('');
+      Exit(ErrorResponse(Id, '-32602', 'Cada requisição MCP deve possuir params com _meta.'));
+      end;
+    end;
+    if (FLegacyState <> lsReady) and
+       not ValidateRequestMeta(ParamsJson, MetaError) then
     begin
       if IsNotification then Exit('');
       if SameText(MetaError, 'VERSAO_NAO_SUPORTADA') then
@@ -444,11 +504,11 @@ begin
     if IsNotification then Exit('');
     if SameText(MethodValue.Value, 'server/discover') then Exit(HandleDiscover(Id));
     if SameText(MethodValue.Value, 'tools/list') then Exit(HandleToolsList(Id));
-    if SameText(MethodValue.Value, 'tools/call') then Exit(HandleToolsCall(Id, ParamsValue.ToJSON));
+    if SameText(MethodValue.Value, 'tools/call') then Exit(HandleToolsCall(Id, ParamsJson));
     if SameText(MethodValue.Value, 'resources/list') then Exit(HandleResourcesList(Id));
-    if SameText(MethodValue.Value, 'resources/read') then Exit(HandleResourcesRead(Id, ParamsValue.ToJSON));
+    if SameText(MethodValue.Value, 'resources/read') then Exit(HandleResourcesRead(Id, ParamsJson));
     if SameText(MethodValue.Value, 'prompts/list') then Exit(HandlePromptsList(Id));
-    if SameText(MethodValue.Value, 'prompts/get') then Exit(HandlePromptsGet(Id, ParamsValue.ToJSON));
+    if SameText(MethodValue.Value, 'prompts/get') then Exit(HandlePromptsGet(Id, ParamsJson));
     Result := ErrorResponse(Id, '-32601', 'Método não suportado.');
   finally
     Request.Free;
