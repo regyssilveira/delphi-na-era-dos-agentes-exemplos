@@ -8,20 +8,24 @@ uses
   TechStore.Services;
 
 type
+  { Perfil MCP moderno e sem estado, limitado ao laboratório local do livro. }
   TTechStoreMcpServer = class
   private
     FDatabase: TTechStoreDatabase;
     FServices: TTechStoreServices;
-    FInitializeRequested: Boolean;
-    FInitialized: Boolean;
-    function ErrorResponse(const AId, ACode, AMessage: string): string;
+    function ErrorResponse(const AId, ACode, AMessage: string;
+      const ADataJson: string = ''): string;
+    function CompleteResponse(const AId, AFields: string): string;
+    function JsonString(const AValue: string): string;
+    function ValidateRequestMeta(const AParamsJson: string;
+      out AErrorResponse: string): Boolean;
     function TryGetInteger(const AObject: TJSONObject; const AName: string;
       out AValue: Integer): Boolean;
     function HasOnlyArguments(const AObject: TJSONObject;
       const AAllowed: array of string): Boolean;
-    function HandleInitialize(const AId, AParamsJson: string): string;
+    function HandleDiscover(const AId: string): string;
     function HandleToolsList(const AId: string): string;
-    function HandleToolsCall(const AId: string; const AParamsJson: string): string;
+    function HandleToolsCall(const AId, AParamsJson: string): string;
     function ToolResult(const AId: string; const AData: TJSONValue): string;
     function HandleResourcesList(const AId: string): string;
     function HandleResourcesRead(const AId, AParamsJson: string): string;
@@ -38,6 +42,10 @@ implementation
 uses
   System.SysUtils;
 
+const
+  McpProtocolVersion = '2026-07-28';
+  ServerVersion = '0.2.0';
+
 constructor TTechStoreMcpServer.Create(ADatabase: TTechStoreDatabase);
 begin
   inherited Create;
@@ -51,11 +59,89 @@ begin
   inherited Destroy;
 end;
 
-function TTechStoreMcpServer.ErrorResponse(const AId, ACode, AMessage: string): string;
+function TTechStoreMcpServer.JsonString(const AValue: string): string;
+var
+  Json: TJSONString;
+begin
+  Json := TJSONString.Create(AValue);
+  try
+    Result := Json.ToJSON;
+  finally
+    Json.Free;
+  end;
+end;
+
+function TTechStoreMcpServer.ErrorResponse(const AId, ACode, AMessage,
+  ADataJson: string): string;
+var
+  DataFragment: string;
+begin
+  if ADataJson = '' then
+    DataFragment := ''
+  else
+    DataFragment := ',"data":' + ADataJson;
+  Result := Format(
+    '{"jsonrpc":"2.0","id":%s,"error":{"code":%s,"message":%s%s}}',
+    [AId, ACode, JsonString(AMessage), DataFragment]);
+end;
+
+function TTechStoreMcpServer.CompleteResponse(const AId, AFields: string): string;
 begin
   Result := Format(
-    '{"jsonrpc":"2.0","id":%s,"error":{"code":%s,"message":%s}}',
-    [AId, ACode, TJSONString.Create(AMessage).ToJSON]);
+    '{"jsonrpc":"2.0","id":%s,"result":{"resultType":"complete",%s,' +
+    '"_meta":{"io.modelcontextprotocol/serverInfo":{' +
+    '"name":"techstore-erp","version":"%s"}}}}',
+    [AId, AFields, ServerVersion]);
+end;
+
+function TTechStoreMcpServer.ValidateRequestMeta(const AParamsJson: string;
+  out AErrorResponse: string): Boolean;
+var
+  Params, Meta: TJSONObject;
+  Value: TJSONValue;
+begin
+  Result := False;
+  Params := TJSONObject.ParseJSONValue(AParamsJson) as TJSONObject;
+  try
+    if Params = nil then
+    begin
+      AErrorResponse := 'Os parâmetros devem ser um objeto JSON.';
+      Exit;
+    end;
+    Value := Params.GetValue('_meta');
+    if not (Value is TJSONObject) then
+    begin
+      AErrorResponse := 'Cada requisição MCP deve informar params._meta.';
+      Exit;
+    end;
+    Meta := TJSONObject(Value);
+    Value := Meta.GetValue('io.modelcontextprotocol/protocolVersion');
+    if not (Value is TJSONString) then
+    begin
+      AErrorResponse := 'params._meta deve informar io.modelcontextprotocol/protocolVersion.';
+      Exit;
+    end;
+    if not SameText(Value.Value, McpProtocolVersion) then
+    begin
+      AErrorResponse := 'VERSAO_NAO_SUPORTADA';
+      Exit;
+    end;
+    Value := Meta.GetValue('io.modelcontextprotocol/clientCapabilities');
+    if not (Value is TJSONObject) then
+    begin
+      AErrorResponse := 'params._meta deve informar io.modelcontextprotocol/clientCapabilities como objeto.';
+      Exit;
+    end;
+    Value := Meta.GetValue('io.modelcontextprotocol/clientInfo');
+    if (Value <> nil) and not (Value is TJSONObject) then
+    begin
+      AErrorResponse := 'clientInfo, quando informado, deve ser um objeto.';
+      Exit;
+    end;
+    Result := True;
+  finally
+    Params.Free;
+  end;
 end;
 
 function TTechStoreMcpServer.TryGetInteger(const AObject: TJSONObject;
@@ -90,69 +176,62 @@ begin
   end;
 end;
 
-function TTechStoreMcpServer.HandleInitialize(const AId, AParamsJson: string): string;
-var
-  Params: TJSONObject;
-  ProtocolVersion: TJSONValue;
+function TTechStoreMcpServer.HandleDiscover(const AId: string): string;
 begin
-  Params := TJSONObject.ParseJSONValue(AParamsJson) as TJSONObject;
-  try
-    if Params = nil then
-      Exit(ErrorResponse(AId, '-32602', 'Os parâmetros de initialize devem ser um objeto JSON.'));
-    ProtocolVersion := Params.GetValue('protocolVersion');
-    if (ProtocolVersion = nil) or
-       not SameText(ProtocolVersion.Value, '2026-07-28') then
-      Exit(ErrorResponse(AId, '-32602',
-        'O cliente deve informar protocolVersion 2026-07-28.'));
-    FInitializeRequested := True;
-    FInitialized := False;
-    Result := Format(
-      '{"jsonrpc":"2.0","id":%s,"result":{' +
-      '"protocolVersion":"2026-07-28",' +
-      '"serverInfo":{"name":"techstore-erp","version":"0.1.0"},' +
-      '"capabilities":{"tools":{},"resources":{},"prompts":{}}}}', [AId]);
-  finally
-    Params.Free;
-  end;
+  Result := CompleteResponse(AId,
+    '"supportedVersions":["' + McpProtocolVersion + '"],' +
+    '"capabilities":{"tools":{},"resources":{},"prompts":{}},' +
+    '"serverInfo":{"name":"techstore-erp","version":"' + ServerVersion + '"},' +
+    '"instructions":"Servidor MCP local do TechStore. Use somente dados fictícios; ' +
+    'criar_orcamento prepara uma minuta e não confirma operações.",' +
+    '"ttlMs":300000,"cacheScope":"public"');
 end;
 
 function TTechStoreMcpServer.HandleToolsList(const AId: string): string;
 begin
-  Result := Format(
-    '{"jsonrpc":"2.0","id":%s,"result":{"tools":[' +
-    '{"name":"consultar_cliente","description":"Retorna o cliente pelo identificador.",' +
+  Result := CompleteResponse(AId,
+    '"tools":[' +
+    '{"name":"consultar_cliente","title":"Consultar cliente",' +
+    '"description":"Retorna um cliente fictício pelo identificador.",' +
     '"inputSchema":{"type":"object","properties":{"id":{"type":"integer"}},' +
     '"required":["id"],"additionalProperties":false}},' +
-    '{"name":"consultar_produto","description":"Retorna o produto pelo identificador.",' +
+    '{"name":"consultar_produto","title":"Consultar produto",' +
+    '"description":"Retorna um produto fictício pelo identificador.",' +
     '"inputSchema":{"type":"object","properties":{"id":{"type":"integer"}},' +
     '"required":["id"],"additionalProperties":false}},' +
-    '{"name":"criar_orcamento","description":"Prepara uma cotação que exige aprovação humana.",' +
+    '{"name":"criar_orcamento","title":"Preparar orçamento",' +
+    '"description":"Prepara uma cotação fictícia que exige aprovação humana.",' +
     '"inputSchema":{"type":"object","properties":{' +
     '"customerId":{"type":"integer"},"productId":{"type":"integer"},' +
     '"quantity":{"type":"integer"}},"required":["customerId","productId","quantity"],' +
     '"additionalProperties":false}},' +
-    '{"name":"consultar_estoque_baixo",' +
-    '"description":"Retorna produtos cujo saldo está abaixo do estoque mínimo.",' +
-    '"inputSchema":{"type":"object","additionalProperties":false}}]}}', [AId]);
+    '{"name":"consultar_estoque_baixo","title":"Consultar estoque baixo",' +
+    '"description":"Retorna produtos fictícios cujo saldo está abaixo do mínimo.",' +
+    '"inputSchema":{"type":"object","additionalProperties":false}}],' +
+    '"ttlMs":300000,"cacheScope":"public"');
 end;
 
 function TTechStoreMcpServer.ToolResult(const AId: string;
   const AData: TJSONValue): string;
+var
+  DataJson: string;
 begin
-  Result := Format(
-    '{"jsonrpc":"2.0","id":%s,"result":{"content":[{' +
-    '"type":"text","text":%s}],"isError":false}}',
-    [AId, TJSONString.Create(AData.ToJSON).ToJSON]);
+  DataJson := AData.ToJSON;
+  Result := CompleteResponse(AId,
+    Format('"content":[{"type":"text","text":%s}],' +
+      '"structuredContent":%s,"isError":false',
+      [JsonString(DataJson), DataJson]));
 end;
 
 function TTechStoreMcpServer.HandleResourcesList(const AId: string): string;
 begin
-  Result := Format(
-    '{"jsonrpc":"2.0","id":%s,"result":{"resources":[' +
+  Result := CompleteResponse(AId,
+    '"resources":[' +
     '{"uri":"techstore://policies/operation-classification",' +
     '"name":"Classificação de operações",' +
     '"description":"Política didática para leitura, preparação e ação crítica.",' +
-    '"mimeType":"text/markdown"}]}}', [AId]);
+    '"mimeType":"text/markdown"}],' +
+    '"ttlMs":300000,"cacheScope":"public"');
 end;
 
 function TTechStoreMcpServer.HandleResourcesRead(const AId,
@@ -174,11 +253,9 @@ begin
       '- Leitura: consulta dados fictícios sem efeito externo.' + sLineBreak +
       '- Preparação: cria uma minuta sujeita à revisão humana.' + sLineBreak +
       '- Ação crítica: exige identidade, autorização e aprovação explícita.';
-    Result := Format(
-      '{"jsonrpc":"2.0","id":%s,"result":{"contents":[' +
-      '{"uri":"techstore://policies/operation-classification",' +
-      '"mimeType":"text/markdown","text":%s}]}}',
-      [AId, TJSONString.Create(Text).ToJSON]);
+    Result := CompleteResponse(AId,
+      Format('"contents":[{"uri":"techstore://policies/operation-classification",' +
+        '"mimeType":"text/markdown","text":%s}]', [JsonString(Text)]));
   finally
     Params.Free;
   end;
@@ -186,12 +263,13 @@ end;
 
 function TTechStoreMcpServer.HandlePromptsList(const AId: string): string;
 begin
-  Result := Format(
-    '{"jsonrpc":"2.0","id":%s,"result":{"prompts":[' +
+  Result := CompleteResponse(AId,
+    '"prompts":[' +
     '{"name":"analisar_estoque_baixo",' +
     '"description":"Orienta a análise dos produtos abaixo do estoque mínimo.",' +
     '"arguments":[{"name":"objetivo","description":"Finalidade da análise",' +
-    '"required":false}]}]}}', [AId]);
+    '"required":false}]}],' +
+    '"ttlMs":300000,"cacheScope":"public"');
 end;
 
 function TTechStoreMcpServer.HandlePromptsGet(const AId,
@@ -208,31 +286,25 @@ begin
     if (NameValue = nil) or not SameText(NameValue.Value,
       'analisar_estoque_baixo') then
       Exit(ErrorResponse(AId, '-32602', 'Prompt não encontrado.'));
-    Result := Format(
-      '{"jsonrpc":"2.0","id":%s,"result":{' +
+    Result := CompleteResponse(AId,
       '"description":"Análise didática de estoque baixo.","messages":[' +
       '{"role":"user","content":{"type":"text","text":' +
       '"Consulte consultar_estoque_baixo. Explique os itens encontrados, ' +
-      'priorize o maior desvio em relação ao mínimo e não execute ações externas."}}]}}',
-      [AId]);
+      'priorize o maior desvio em relação ao mínimo e não execute ações externas."}}]');
   finally
     Params.Free;
   end;
 end;
 
-function TTechStoreMcpServer.HandleToolsCall(const AId: string;
-  const AParamsJson: string): string;
+function TTechStoreMcpServer.HandleToolsCall(const AId,
+  AParamsJson: string): string;
 var
   Params: TJSONObject;
   NameValue: TJSONValue;
   ArgumentsValue: TJSONValue;
   Data: TJSONArray;
   ObjectData: TJSONObject;
-  Content: string;
-  CustomerId: Integer;
-  ProductId: Integer;
-  Quantity: Integer;
-  EntityId: Integer;
+  CustomerId, ProductId, Quantity, EntityId: Integer;
 begin
   Params := TJSONObject.ParseJSONValue(AParamsJson) as TJSONObject;
   try
@@ -240,9 +312,8 @@ begin
       if Params = nil then
         Exit(ErrorResponse(AId, '-32602', 'Os parâmetros devem ser um objeto JSON.'));
       NameValue := Params.GetValue('name');
-      if NameValue = nil then
+      if not (NameValue is TJSONString) then
         Exit(ErrorResponse(AId, '-32601', 'Ferramenta não encontrada.'));
-
       if SameText(NameValue.Value, 'consultar_cliente') or
          SameText(NameValue.Value, 'consultar_produto') or
          SameText(NameValue.Value, 'criar_orcamento') then
@@ -280,23 +351,16 @@ begin
           ObjectData.Free;
         end;
       end;
-
       if not SameText(NameValue.Value, 'consultar_estoque_baixo') then
         Exit(ErrorResponse(AId, '-32601', 'Ferramenta não encontrada.'));
-
       ArgumentsValue := Params.GetValue('arguments');
       if (ArgumentsValue <> nil) and
          ((not (ArgumentsValue is TJSONObject)) or
           (not HasOnlyArguments(TJSONObject(ArgumentsValue), []))) then
         Exit(ErrorResponse(AId, '-32602', 'Arguments contém propriedades não permitidas.'));
-
       Data := FServices.ConsultLowStock;
       try
-        Content := Data.ToJSON;
-        Result := Format(
-          '{"jsonrpc":"2.0","id":%s,"result":{"content":[' +
-          '{"type":"text","text":%s}],"isError":false}}',
-          [AId, TJSONString.Create(Content).ToJSON]);
+        Result := ToolResult(AId, Data);
       finally
         Data.Free;
       end;
@@ -312,12 +376,10 @@ end;
 function TTechStoreMcpServer.ProcessLine(const ALine: string): string;
 var
   Request: TJSONObject;
-  VersionValue: TJSONValue;
-  MethodValue: TJSONValue;
-  IdValue: TJSONValue;
-  ParamsValue: TJSONValue;
-  Id: string;
+  VersionValue, MethodValue, IdValue, ParamsValue: TJSONValue;
+  Id, MetaError: string;
   IsNotification: Boolean;
+  MetaObject, RequestedVersion: TJSONValue;
 begin
   Request := TJSONObject.ParseJSONValue(ALine) as TJSONObject;
   try
@@ -325,68 +387,47 @@ begin
       Exit(ErrorResponse('null', '-32700', 'JSON inválido.'));
     IdValue := Request.GetValue('id');
     VersionValue := Request.GetValue('jsonrpc');
-    if (VersionValue = nil) or (VersionValue.ClassType <> TJSONString) or
-       not SameText(VersionValue.Value, '2.0') then
+    if not (VersionValue is TJSONString) or not SameText(VersionValue.Value, '2.0') then
       Exit(ErrorResponse('null', '-32600', 'Versão JSON-RPC inválida.'));
-    if (IdValue <> nil) and not ((IdValue is TJSONString) or
-      (IdValue is TJSONNumber) or (IdValue is TJSONNull)) then
+    if (IdValue <> nil) and not ((IdValue is TJSONString) or (IdValue is TJSONNumber)) then
       Exit(ErrorResponse('null', '-32600', 'Identificador JSON-RPC inválido.'));
     IsNotification := IdValue = nil;
-    if IsNotification then
-      Id := 'null'
-    else
-      Id := IdValue.ToJSON;
+    if IsNotification then Id := 'null' else Id := IdValue.ToJSON;
     MethodValue := Request.GetValue('method');
-    if (MethodValue = nil) or (MethodValue.ClassType <> TJSONString) then
+    if not (MethodValue is TJSONString) then
       Exit(ErrorResponse(Id, '-32600', 'Método JSON-RPC inválido.'));
-
-    if SameText(MethodValue.Value, 'notifications/initialized') then
+    ParamsValue := Request.GetValue('params');
+    if not (ParamsValue is TJSONObject) then
     begin
-      if FInitializeRequested then
-        FInitialized := True;
-      Exit('');
+      if IsNotification then Exit('');
+      Exit(ErrorResponse(Id, '-32602', 'Cada requisição MCP deve possuir params com _meta.'));
     end;
-
-    if IsNotification then
-      Exit('');
-
-    if SameText(MethodValue.Value, 'initialize') then
+    if not ValidateRequestMeta(ParamsValue.ToJSON, MetaError) then
     begin
-      ParamsValue := Request.GetValue('params');
-      if ParamsValue = nil then
-        Exit(ErrorResponse(Id, '-32602', 'Parâmetros ausentes.'));
-      Exit(HandleInitialize(Id, ParamsValue.ToJSON));
+      if IsNotification then Exit('');
+      if SameText(MetaError, 'VERSAO_NAO_SUPORTADA') then
+      begin
+        MetaObject := TJSONObject(ParamsValue).GetValue('_meta');
+        RequestedVersion := nil;
+        if MetaObject is TJSONObject then
+          RequestedVersion := TJSONObject(MetaObject).GetValue(
+            'io.modelcontextprotocol/protocolVersion');
+        if RequestedVersion = nil then
+          Exit(ErrorResponse(Id, '-32602', 'Versão MCP ausente.'));
+        Exit(ErrorResponse(Id, '-32022', 'Versão MCP não suportada.',
+          '{"supported":["' + McpProtocolVersion + '"],"requested":' +
+          JsonString(RequestedVersion.Value) + '}'));
+      end;
+      Exit(ErrorResponse(Id, '-32602', MetaError));
     end;
-    if not FInitialized then
-      Exit(ErrorResponse(Id, '-32002',
-        'O cliente deve enviar notifications/initialized antes desta chamada.'));
-    if SameText(MethodValue.Value, 'tools/list') then
-      Exit(HandleToolsList(Id));
-    if SameText(MethodValue.Value, 'tools/call') then
-    begin
-      ParamsValue := Request.GetValue('params');
-      if ParamsValue = nil then
-        Exit(ErrorResponse(Id, '-32602', 'Parâmetros ausentes.'));
-      Exit(HandleToolsCall(Id, ParamsValue.ToJSON));
-    end;
-    if SameText(MethodValue.Value, 'resources/list') then
-      Exit(HandleResourcesList(Id));
-    if SameText(MethodValue.Value, 'resources/read') then
-    begin
-      ParamsValue := Request.GetValue('params');
-      if ParamsValue = nil then
-        Exit(ErrorResponse(Id, '-32602', 'Parâmetros ausentes.'));
-      Exit(HandleResourcesRead(Id, ParamsValue.ToJSON));
-    end;
-    if SameText(MethodValue.Value, 'prompts/list') then
-      Exit(HandlePromptsList(Id));
-    if SameText(MethodValue.Value, 'prompts/get') then
-    begin
-      ParamsValue := Request.GetValue('params');
-      if ParamsValue = nil then
-        Exit(ErrorResponse(Id, '-32602', 'Parâmetros ausentes.'));
-      Exit(HandlePromptsGet(Id, ParamsValue.ToJSON));
-    end;
+    if IsNotification then Exit('');
+    if SameText(MethodValue.Value, 'server/discover') then Exit(HandleDiscover(Id));
+    if SameText(MethodValue.Value, 'tools/list') then Exit(HandleToolsList(Id));
+    if SameText(MethodValue.Value, 'tools/call') then Exit(HandleToolsCall(Id, ParamsValue.ToJSON));
+    if SameText(MethodValue.Value, 'resources/list') then Exit(HandleResourcesList(Id));
+    if SameText(MethodValue.Value, 'resources/read') then Exit(HandleResourcesRead(Id, ParamsValue.ToJSON));
+    if SameText(MethodValue.Value, 'prompts/list') then Exit(HandlePromptsList(Id));
+    if SameText(MethodValue.Value, 'prompts/get') then Exit(HandlePromptsGet(Id, ParamsValue.ToJSON));
     Result := ErrorResponse(Id, '-32601', 'Método não suportado.');
   finally
     Request.Free;

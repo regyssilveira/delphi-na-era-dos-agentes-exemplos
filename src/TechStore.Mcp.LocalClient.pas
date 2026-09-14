@@ -6,16 +6,16 @@ uses
   TechStore.Mcp;
 
 type
-  { Cliente didático em memória. Ele modela as mensagens MCP sem implementar pipes. }
+  { Cliente didático em memória. Ele modela o perfil MCP moderno, sem pipes. }
   TTechStoreMcpLocalClient = class
   private
     FServer: TTechStoreMcpServer;
     FNextId: Integer;
-    function Request(const AMethod, AParamsJson: string): string;
-    procedure Notify(const AMethod, AParamsJson: string);
+    function Meta: string;
+    function Request(const AMethod, AFields: string): string;
   public
     constructor Create(AServer: TTechStoreMcpServer);
-    procedure Initialize;
+    function Discover: string;
     function ListTools: string;
     function ListResources: string;
     function GetPrompt(const AName: string): string;
@@ -33,43 +33,45 @@ begin
   FNextId := 1;
 end;
 
-function TTechStoreMcpLocalClient.Request(const AMethod, AParamsJson: string): string;
+function TTechStoreMcpLocalClient.Meta: string;
 begin
+  Result :=
+    '"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28",' +
+    '"io.modelcontextprotocol/clientInfo":{"name":"techstore-local-client","version":"0.2.0"},' +
+    '"io.modelcontextprotocol/clientCapabilities":{}}';
+end;
+
+function TTechStoreMcpLocalClient.Request(const AMethod, AFields: string): string;
+var
+  Params: string;
+begin
+  Params := Meta;
+  if AFields <> '' then
+    Params := Params + ',' + AFields;
   Result := FServer.ProcessLine(Format(
-    '{"jsonrpc":"2.0","id":%d,"method":"%s","params":%s}',
-    [FNextId, AMethod, AParamsJson]));
+    '{"jsonrpc":"2.0","id":%d,"method":"%s","params":{%s}}',
+    [FNextId, AMethod, Params]));
   Inc(FNextId);
 end;
 
-procedure TTechStoreMcpLocalClient.Notify(const AMethod, AParamsJson: string);
+function TTechStoreMcpLocalClient.Discover: string;
 begin
-  FServer.ProcessLine(Format(
-    '{"jsonrpc":"2.0","method":"%s","params":%s}',
-    [AMethod, AParamsJson]));
-end;
-
-procedure TTechStoreMcpLocalClient.Initialize;
-begin
-  Request('initialize',
-    '{"protocolVersion":"2026-07-28","capabilities":{},' +
-    '"clientInfo":{"name":"techstore-local-client","version":"0.1.0"}}');
-  Notify('notifications/initialized', '{}');
+  Result := Request('server/discover', '');
 end;
 
 function TTechStoreMcpLocalClient.ListTools: string;
 begin
-  Result := Request('tools/list', '{}');
+  Result := Request('tools/list', '');
 end;
 
 function TTechStoreMcpLocalClient.ListResources: string;
 begin
-  Result := Request('resources/list', '{}');
+  Result := Request('resources/list', '');
 end;
 
 function TTechStoreMcpLocalClient.GetPrompt(const AName: string): string;
 begin
-  Result := Request('prompts/get',
-    Format('{"name":"%s"}', [AName]));
+  Result := Request('prompts/get', Format('"name":"%s"', [AName]));
 end;
 
 end.
