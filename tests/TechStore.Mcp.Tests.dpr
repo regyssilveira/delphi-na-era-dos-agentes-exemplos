@@ -4,6 +4,7 @@
 
 uses
   System.SysUtils,
+  System.IOUtils,
   TechStore.Data in '..\src\TechStore.Data.pas',
   TechStore.Services in '..\src\TechStore.Services.pas',
   TechStore.Authorization in '..\src\TechStore.Authorization.pas',
@@ -49,8 +50,13 @@ var
   Services: TTechStoreServices;
   Authorization: TTechStoreAuthorization;
   Response: string;
+  DatabaseFileName: string;
+  TestId: TGUID;
 begin
-  Database := TTechStoreDatabase.Create;
+  CreateGUID(TestId);
+  DatabaseFileName := TPath.Combine(TPath.GetTempPath,
+    'techstore-mcp-' + GUIDToString(TestId) + '.db');
+  Database := TTechStoreDatabase.Create(DatabaseFileName);
   try
     Database.Initialize;
     Authorization := TTechStoreAuthorization.Create;
@@ -124,6 +130,29 @@ begin
       RequireContains(Response, 'PREPARADO');
       RequireContains(Response, 'requiresHumanApproval');
 
+      Response := Server.ProcessLine(Request(14, 'tools/call',
+        '"name":"consultar_faturas_cliente","arguments":{"id":1}'));
+      RequireContains(Response, '"code":-32003');
+
+      Server.Free;
+      Server := TTechStoreMcpServer.Create(Database, 'operador-demo');
+      Response := Server.ProcessLine(Request(15, 'tools/call',
+        '"name":"consultar_faturas_cliente","arguments":{"id":1}'));
+      RequireContains(Response, '8450');
+      Require(not Response.Contains('creditLimit'), 'Resposta expôs limite de crédito.');
+      Response := Server.ProcessLine(Request(16, 'tools/call',
+        '"name":"consultar_faturas_cliente","arguments":{"id":999}'));
+      RequireContains(Response, '"code":-32602');
+      Response := Server.ProcessLine(Request(17, 'tools/call',
+        '"name":"consultar_faturas_cliente","arguments":{"id":1.5}'));
+      RequireContains(Response, '"code":-32602');
+      Response := Server.ProcessLine(Request(18, 'tools/call',
+        '"name":"consultar_faturas_cliente","arguments":{"id":1,"extra":true}'));
+      RequireContains(Response, '"code":-32602');
+      Response := Server.ProcessLine(Request(19, 'tools/call',
+        '"name":"consultar_faturas_cliente","arguments":{"id":0}'));
+      RequireContains(Response, '"code":-32602');
+
       Response := Server.ProcessLine(Request(10, 'resources/list', ''));
       RequireContains(Response, 'techstore://policies/operation-classification');
       Response := Server.ProcessLine(Request(11, 'resources/read',
@@ -167,6 +196,8 @@ begin
     end;
   finally
     Database.Free;
+    if FileExists(DatabaseFileName) then
+      DeleteFile(DatabaseFileName);
   end;
 end;
 

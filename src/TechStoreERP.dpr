@@ -15,12 +15,13 @@ var
   Response: string;
 begin
   try
-    Database := TTechStoreDatabase.Create;
+    Database := TTechStoreDatabase.Create(GetEnvironmentVariable('TECHSTORE_DB_PATH'));
     try
       Database.Initialize;
       if (ParamCount > 0) and SameText(ParamStr(1), '--mcp-stdio') then
       begin
-        Server := TTechStoreMcpServer.Create(Database);
+        Server := TTechStoreMcpServer.Create(Database,
+          GetEnvironmentVariable('TECHSTORE_DEMO_ACTOR'));
         try
           while ReadMcpLine(Line) do
           begin

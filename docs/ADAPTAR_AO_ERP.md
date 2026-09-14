@@ -1,5 +1,36 @@
 # Da consulta existente à primeira tool do seu ERP
 
+## Exemplo completo no código: faturas de um cliente
+
+Antes de adaptar o próprio sistema, execute `consultar_faturas_cliente`. Esta é uma segunda
+consulta, adicionada depois das três consultas básicas para mostrar todas as fronteiras:
+
+1. `TechStore.Data.ListInvoicesByCustomerId` executa SQL parametrizado sobre `invoices` e
+   devolve somente `id`, `issuedAt` e `totalAmount`, em ordem estável. O limite de crédito do
+   cadastro não é copiado para a resposta.
+2. `TechStore.Services.ConsultInvoicesByCustomer` exige ator, verifica que o cliente existe e
+   só então chama o repositório. O serviço não depende de JSON-RPC.
+3. `TechStore.Mcp.HandleToolsList` publica o `inputSchema` com `id` inteiro obrigatório;
+   `HandleToolsCall` recusa campos extras e tipos inválidos, chama o serviço e usa o mesmo
+   `ToolResult` para `content` e `structuredContent`.
+4. A suíte prova a recusa sem ator (`-32003`), o sucesso com ator de demonstração, o cliente
+   inexistente e a ausência de `creditLimit`; o teste de processo prova o caminho `stdio`.
+
+Para testar no Inspector com dados fictícios, configure `TECHSTORE_DEMO_ACTOR=operador-demo`
+no ambiente do processo iniciado pelo host. Sem a variável, a tool permanece listada, mas sua
+chamada é negada. Esse valor é autodeclarado pelo ambiente, não uma identidade autenticada:
+serve apenas para mostrar onde uma identidade confiável precisaria entrar. Não use essa variável
+para autorizar dados reais. Em um ERP, substitua-a por identidade emitida e verificada pelo
+mecanismo aprovado, aplique escopo por usuário/filial e teste a negação em todos os caminhos.
+
+Os testes usam um arquivo SQLite temporário diferente a cada execução; o banco em Documentos
+não é alterado pela suíte. O executável de demonstração aceita `TECHSTORE_DB_PATH` para apontar
+um banco fictício isolado. Não use essa variável para passar credenciais ou apontar um ERP real.
+
+Use os quatro passos acima como um diff guiado: duplique o percurso para uma única consulta
+existente do seu ERP, trocando a query por uma chamada ao serviço de domínio já autorizado.
+O aceite exige conferir significado, campos, negação e processo com o responsável pelo dado.
+
 Este roteiro é para uma integração local em homologação. Escolha uma consulta de baixo risco que
 já exista em um serviço Delphi do seu ERP. O exemplo usa `consultar_produto`; troque nome,
 campos e serviço conforme o seu domínio. Não conecte o banco de produção durante esta etapa.

@@ -33,7 +33,8 @@ Os testes devem terminar com `Todos os testes MCP passaram.` e
 `Teste de processo MCP e UTF-8 passou.`. O segundo programa inicia o executável por pipes,
 envia texto acentuado em UTF-8, separa `stdout` de `stderr` e verifica o encerramento após fechar
 `stdin`. O executável do MiniERP
-cria `techstore.db` em `Documentos\TechStoreERP`, contendo somente dados fictícios.
+cria `techstore.db` em `Documentos\TechStoreERP`, contendo somente dados fictícios. A suíte
+usa bancos SQLite temporários próprios e não acrescenta orçamentos ao banco em Documentos.
 
 ## Validar com um cliente MCP independente
 
@@ -48,7 +49,7 @@ npx -y @modelcontextprotocol/inspector --cli --config .\docs\inspector.local.jso
 npx -y @modelcontextprotocol/inspector --cli --config .\docs\inspector.local.json --server techstore --method tools/call --tool-name consultar_estoque_baixo
 ```
 
-O resultado deve listar as quatro tools e depois Mouse Orbital, Notebook Atlas 14 e SSD Aurora
+O resultado deve listar as cinco tools e depois Mouse Orbital, Notebook Atlas 14 e SSD Aurora
 1 TB. Em seguida, chame
 `criar_orcamento` com `customerId: 1`, `productId: 2` e `quantity: 20`; o retorno deve
 conter `PREPARADO` e `requiresHumanApproval: true`.

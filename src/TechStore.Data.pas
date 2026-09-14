@@ -24,22 +24,26 @@ type
     procedure CreateSchema;
     procedure SeedData;
   public
-    constructor Create;
+    constructor Create(const ADatabaseFileName: string = '');
     destructor Destroy; override;
     procedure Initialize;
     function ListLowStock: TJSONArray;
     function FindCustomerById(const AId: Integer): TJSONObject;
     function FindProductById(const AId: Integer): TJSONObject;
+    function ListInvoicesByCustomerId(const AId: Integer): TJSONArray;
     function CreateQuoteDraft(const ACustomerId, AProductId, AQuantity: Integer): Integer;
     property DatabaseFileName: string read FDatabaseFileName;
   end;
 
 implementation
 
-constructor TTechStoreDatabase.Create;
+constructor TTechStoreDatabase.Create(const ADatabaseFileName: string);
 begin
   inherited Create;
-  FDatabaseFileName := TPath.Combine(TPath.GetDocumentsPath, 'TechStoreERP\techstore.db');
+  if ADatabaseFileName <> '' then
+    FDatabaseFileName := ExpandFileName(ADatabaseFileName)
+  else
+    FDatabaseFileName := TPath.Combine(TPath.GetDocumentsPath, 'TechStoreERP\techstore.db');
   ForceDirectories(ExtractFilePath(FDatabaseFileName));
 
   FSQLiteDriver := TFDPhysSQLiteDriverLink.Create(nil);
@@ -129,6 +133,40 @@ begin
   FConnection.Free;
   FSQLiteDriver.Free;
   inherited Destroy;
+end;
+
+function TTechStoreDatabase.ListInvoicesByCustomerId(const AId: Integer): TJSONArray;
+var
+  Query: TFDQuery;
+  Invoice: TJSONObject;
+begin
+  Result := TJSONArray.Create;
+  Query := TFDQuery.Create(nil);
+  try
+    try
+      Query.Connection := FConnection;
+      Query.SQL.Text :=
+        'SELECT id, issued_at, total_amount FROM invoices ' +
+        'WHERE customer_id = :customer_id ORDER BY id';
+      Query.ParamByName('customer_id').AsInteger := AId;
+      Query.Open;
+      while not Query.Eof do
+      begin
+        Invoice := TJSONObject.Create;
+        Invoice.AddPair('id', TJSONNumber.Create(Query.FieldByName('id').AsInteger));
+        Invoice.AddPair('issuedAt', Query.FieldByName('issued_at').AsString);
+        Invoice.AddPair('totalAmount',
+          TJSONNumber.Create(Query.FieldByName('total_amount').AsFloat));
+        Result.AddElement(Invoice);
+        Query.Next;
+      end;
+    except
+      Result.Free;
+      raise;
+    end;
+  finally
+    Query.Free;
+  end;
 end;
 
 procedure TTechStoreDatabase.Initialize;

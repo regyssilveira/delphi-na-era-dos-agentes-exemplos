@@ -27,13 +27,15 @@ preparação de orçamento abaixo:
 
 - `consultar_cliente` e `consultar_produto`;
 - `consultar_estoque_baixo`;
+- `consultar_faturas_cliente`, segunda consulta de ponta a ponta, negada sem ator demonstrativo;
 - `criar_orcamento`, que apenas cria um rascunho com estado `PREPARADO` e exige aprovação humana para qualquer confirmação posterior;
 - o recurso `techstore://policies/operation-classification`;
 - o prompt `analisar_estoque_baixo`.
 
-O código separa acesso a dados, regras de negócio e adaptação MCP. A unit de autorização é uma
-demonstração testada diretamente; ela ainda não recebe identidade verificada nem participa do
-despacho MCP. A confirmação crítica não está publicada como tool.
+O código separa acesso a dados, regras de negócio e adaptação MCP. A unit de autorização é
+exercitada diretamente e no despacho de `consultar_faturas_cliente`. O ator demonstrativo vem
+de `TECHSTORE_DEMO_ACTOR`; ele não é autenticado e não permite usar dados reais. A confirmação
+crítica não está publicada como tool.
 
 Consulte [a matriz de alinhamento com o livro](docs/BOOK_ALIGNMENT.md) para distinguir o que já é executável das arquiteturas e contratos de evolução discutidos nos apêndices.
 
@@ -45,6 +47,7 @@ Nenhum dado, credencial ou documento fiscal real é utilizado.
 Execute `TechStoreERP.exe --mcp-stdio` para iniciar o perfil MCP local. Cada linha recebida em
 `stdin` deve conter uma mensagem JSON-RPC UTF-8; cada resposta é escrita em `stdout`.
 Os diagnósticos não devem ser enviados a `stdout`.
+`TECHSTORE_DB_PATH` permite um SQLite fictício isolado; sem ela, o banco fica em Documentos.
 
 O núcleo atual suporta `server/discover`, `tools/list`, `tools/call`, `resources/list`,
 `resources/read`, `prompts/list` e `prompts/get`. Cada requisição deve informar em
@@ -76,6 +79,7 @@ didático, regras de negócio, autorização, schemas de argumentos e tratamento
 Compile também `tests/TechStore.Mcp.Process.Tests.dpr` depois do servidor. Ele inicia o
 executável por pipes, verifica UTF-8 bidirecional, `stdout`, `stderr` e encerramento ao fechar
 `stdin`. Os testes usam somente units fornecidas pelo Delphi e os dados fictícios do projeto.
+Cada execução cria e remove seu próprio arquivo SQLite temporário.
 
 ## Limitações assumidas
 

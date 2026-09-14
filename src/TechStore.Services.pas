@@ -19,10 +19,31 @@ type
     function ConsultCustomer(const AId: Integer): TJSONObject;
     function ConsultProduct(const AId: Integer): TJSONObject;
     function ConsultLowStock: TJSONArray;
+    function ConsultInvoicesByCustomer(const AActor: string;
+      const ACustomerId: Integer): TJSONArray;
     function PrepareQuote(const ACustomerId, AProductId, AQuantity: Integer): TJSONObject;
   end;
 
 implementation
+
+uses TechStore.Authorization;
+
+function TTechStoreServices.ConsultInvoicesByCustomer(const AActor: string;
+  const ACustomerId: Integer): TJSONArray;
+var
+  Authorization: TTechStoreAuthorization;
+  Customer: TJSONObject;
+begin
+  Authorization := TTechStoreAuthorization.Create;
+  try
+    Authorization.RequireAllowed(AActor, 'consultar_faturas_cliente', tsaRead);
+  finally
+    Authorization.Free;
+  end;
+  Customer := ConsultCustomer(ACustomerId);
+  Customer.Free;
+  Result := FDatabase.ListInvoicesByCustomerId(ACustomerId);
+end;
 
 constructor TTechStoreServices.Create(ADatabase: TTechStoreDatabase);
 begin

@@ -5,6 +5,7 @@
 uses
   System.SysUtils,
   System.Classes,
+  System.IOUtils,
   System.JSON,
   Winapi.Windows;
 
@@ -68,7 +69,14 @@ var
   Lines: TArray<string>;
   Json: TJSONValue;
   Index: Integer;
+  TestId: TGUID;
+  DatabaseFileName, PreviousDatabasePath, PreviousActor: string;
 begin
+  CreateGUID(TestId);
+  DatabaseFileName := TPath.Combine(TPath.GetTempPath,
+    'techstore-process-' + GUIDToString(TestId) + '.db');
+  PreviousDatabasePath := GetEnvironmentVariable('TECHSTORE_DB_PATH');
+  PreviousActor := GetEnvironmentVariable('TECHSTORE_DEMO_ACTOR');
   Executable := ExpandFileName('..\src\TechStoreERP.exe');
   Require(FileExists(Executable), 'Compile src\TechStoreERP.dpr antes do teste.');
   FillChar(Security, SizeOf(Security), 0);
@@ -88,8 +96,23 @@ begin
   Startup.hStdError := StdErrWrite;
   FillChar(ProcessInfo, SizeOf(ProcessInfo), 0);
   CommandLine := '"' + Executable + '" --mcp-stdio';
-  Require(CreateProcess(nil, PChar(CommandLine), nil, nil, True,
-    CREATE_NO_WINDOW, nil, nil, Startup, ProcessInfo), 'Falha ao iniciar servidor.');
+  Require(SetEnvironmentVariable('TECHSTORE_DB_PATH', PChar(DatabaseFileName)),
+    'Falha ao configurar banco isolado.');
+  Require(SetEnvironmentVariable('TECHSTORE_DEMO_ACTOR', 'operador-demo'),
+    'Falha ao configurar ator demonstrativo.');
+  try
+    Require(CreateProcess(nil, PChar(CommandLine), nil, nil, True,
+      CREATE_NO_WINDOW, nil, nil, Startup, ProcessInfo), 'Falha ao iniciar servidor.');
+  finally
+    if PreviousDatabasePath = '' then
+      SetEnvironmentVariable('TECHSTORE_DB_PATH', nil)
+    else
+      SetEnvironmentVariable('TECHSTORE_DB_PATH', PChar(PreviousDatabasePath));
+    if PreviousActor = '' then
+      SetEnvironmentVariable('TECHSTORE_DEMO_ACTOR', nil)
+    else
+      SetEnvironmentVariable('TECHSTORE_DEMO_ACTOR', PChar(PreviousActor));
+  end;
   CloseHandle(StdInRead);
   CloseHandle(StdOutWrite);
   CloseHandle(StdErrWrite);
@@ -101,6 +124,9 @@ begin
       '{"jsonrpc":"2.0","id":2,"method":"prompts/get","params":{' +
       Meta + ',"name":"analisar_estoque_baixo","arguments":{' +
       '"objetivo":"reposição em São Paulo"}}}' + #10);
+    SendUtf8(StdInWrite,
+      '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{' +
+      Meta + ',"name":"consultar_faturas_cliente","arguments":{"id":1}}}' + #10);
     CloseHandle(StdInWrite);
     Require(WaitForSingleObject(ProcessInfo.hProcess, 5000) = WAIT_OBJECT_0,
       'Servidor não encerrou após fechar stdin.');
@@ -108,7 +134,7 @@ begin
     Diagnostics := ReadUtf8(StdErrRead);
     Require(Diagnostics = '', 'Servidor escreveu erro: ' + Diagnostics);
     Lines := Output.Trim.Split([#10]);
-    Require(Length(Lines) = 2, 'Esperadas duas respostas MCP em stdout.');
+    Require(Length(Lines) = 3, 'Esperadas três respostas MCP em stdout.');
     for Index := 0 to High(Lines) do
     begin
       Json := TJSONObject.ParseJSONValue(Lines[Index]);
@@ -123,11 +149,14 @@ begin
     Require(Output.Contains('reposição em São Paulo') or
       Output.Contains('reposi\u00E7\u00E3o em S\u00E3o Paulo'),
       'Texto UTF-8 recebido pelo stdin foi corrompido.');
+    Require(Output.Contains('8450'), 'Consulta de faturas não atravessou o processo.');
   finally
     CloseHandle(StdOutRead);
     CloseHandle(StdErrRead);
     CloseHandle(ProcessInfo.hThread);
     CloseHandle(ProcessInfo.hProcess);
+    if FileExists(DatabaseFileName) then
+      System.SysUtils.DeleteFile(DatabaseFileName);
   end;
 end;
 

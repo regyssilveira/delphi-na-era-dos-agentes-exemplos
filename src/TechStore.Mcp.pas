@@ -15,6 +15,7 @@ type
   private
     FDatabase: TTechStoreDatabase;
     FServices: TTechStoreServices;
+    FActor: string;
     FLegacyState: TLegacyState;
     function ErrorResponse(const AId, ACode, AMessage: string;
       const ADataJson: string = ''): string;
@@ -36,7 +37,7 @@ type
     function HandlePromptsList(const AId: string): string;
     function HandlePromptsGet(const AId, AParamsJson: string): string;
   public
-    constructor Create(ADatabase: TTechStoreDatabase);
+    constructor Create(ADatabase: TTechStoreDatabase; const AActor: string = '');
     destructor Destroy; override;
     function ProcessLine(const ALine: string): string;
   end;
@@ -44,17 +45,20 @@ type
 implementation
 
 uses
-  System.SysUtils;
+  System.SysUtils,
+  TechStore.Authorization;
 
 const
   McpProtocolVersion = '2026-07-28';
   LegacyProtocolVersion = '2025-11-25';
   ServerVersion = '0.4.0';
 
-constructor TTechStoreMcpServer.Create(ADatabase: TTechStoreDatabase);
+constructor TTechStoreMcpServer.Create(ADatabase: TTechStoreDatabase;
+  const AActor: string);
 begin
   inherited Create;
   FDatabase := ADatabase;
+  FActor := AActor;
   FServices := TTechStoreServices.Create(FDatabase);
 end;
 
@@ -229,6 +233,10 @@ begin
     '"description":"Retorna um produto fictício pelo identificador.",' +
     '"inputSchema":{"type":"object","properties":{"id":{"type":"integer"}},' +
     '"required":["id"],"additionalProperties":false}},' +
+    '{"name":"consultar_faturas_cliente","title":"Consultar faturas de cliente",' +
+    '"description":"Lista faturas fictícias de um cliente; exige ator configurado no servidor.",' +
+    '"inputSchema":{"type":"object","properties":{"id":{"type":"integer"}},' +
+    '"required":["id"],"additionalProperties":false}},' +
     '{"name":"criar_orcamento","title":"Preparar orçamento",' +
     '"description":"Prepara uma cotação fictícia que exige aprovação humana.",' +
     '"inputSchema":{"type":"object","properties":{' +
@@ -367,7 +375,8 @@ begin
         Exit(ErrorResponse(AId, '-32601', 'Ferramenta não encontrada.'));
       if SameText(NameValue.Value, 'consultar_cliente') or
          SameText(NameValue.Value, 'consultar_produto') or
-         SameText(NameValue.Value, 'criar_orcamento') then
+         SameText(NameValue.Value, 'criar_orcamento') or
+         SameText(NameValue.Value, 'consultar_faturas_cliente') then
       begin
         ArgumentsValue := Params.GetValue('arguments');
         if not (ArgumentsValue is TJSONObject) then
@@ -393,6 +402,15 @@ begin
             Exit(ErrorResponse(AId, '-32602', 'Arguments.id deve ser inteiro.'));
           if SameText(NameValue.Value, 'consultar_cliente') then
             ObjectData := FServices.ConsultCustomer(EntityId)
+          else if SameText(NameValue.Value, 'consultar_faturas_cliente') then
+          begin
+            Data := FServices.ConsultInvoicesByCustomer(FActor, EntityId);
+            try
+              Exit(ToolResult(AId, Data));
+            finally
+              Data.Free;
+            end;
+          end
           else
             ObjectData := FServices.ConsultProduct(EntityId);
         end;
@@ -418,6 +436,8 @@ begin
     except
       on E: ETechStoreBusinessRule do
         Result := ErrorResponse(AId, '-32602', E.Message);
+      on E: ETechStoreAuthorization do
+        Result := ErrorResponse(AId, '-32003', 'Acesso negado.');
     end;
   finally
     Params.Free;
