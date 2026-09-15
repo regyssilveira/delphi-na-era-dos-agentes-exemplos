@@ -57,6 +57,10 @@ conter `PREPARADO` e `requiresHumanApproval: true`.
 O Inspector é usado apenas como cliente de validação. Ele não é dependência do servidor Delphi
 nem do livro.
 
+Para uma pergunta executada por um host de IA, consulte
+[HOST_CODEX_CLI.md](HOST_CODEX_CLI.md). Esse segundo teste foi feito com um banco
+fictício isolado e registra também o cancelamento observado sob sandbox somente leitura.
+
 ## Contrato para hosts locais
 
 Qualquer host MCP compatível deve iniciar o programa abaixo com caminho absoluto:

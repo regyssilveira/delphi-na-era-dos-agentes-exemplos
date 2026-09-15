@@ -27,6 +27,59 @@ Os testes usam um arquivo SQLite temporário diferente a cada execução; o banc
 não é alterado pela suíte. O executável de demonstração aceita `TECHSTORE_DB_PATH` para apontar
 um banco fictício isolado. Não use essa variável para passar credenciais ou apontar um ERP real.
 
+## Antes e depois: o código que realiza a consulta
+
+O “antes” é a rotina Delphi de consulta: ela conhece o banco e o identificador,
+mas não conhece MCP. No exemplo compilado, `TechStore.Data.pas` usa SQL
+parametrizado, seleciona somente três colunas e estabelece ordem estável:
+
+```pascal
+Query.Connection := FConnection;
+Query.SQL.Text :=
+  'SELECT id, issued_at, total_amount FROM invoices ' +
+  'WHERE customer_id = :customer_id ORDER BY id';
+Query.ParamByName('customer_id').AsInteger := AId;
+Query.Open;
+```
+
+O primeiro “depois” é um serviço de aplicação reutilizável. A interface MCP
+não recebe a conexão nem produz SQL; `TechStore.Services.pas` verifica a
+política didática e o cadastro antes de usar a consulta existente:
+
+```pascal
+Authorization.RequireAllowed(AActor, 'consultar_faturas_cliente', tsaRead);
+Customer := ConsultCustomer(ACustomerId);
+Customer.Free;
+Result := FDatabase.ListInvoicesByCustomerId(ACustomerId);
+```
+
+O segundo “depois” é a borda MCP em `TechStore.Mcp.pas`. Ela valida o argumento
+inteiro e campos desconhecidos, chama o serviço, serializa o resultado permitido
+e libera o objeto temporário:
+
+```pascal
+if not HasOnlyArguments(TJSONObject(ArgumentsValue), ['id']) then
+  Exit(ErrorResponse(AId, '-32602', 'Arguments contém propriedades não permitidas.'));
+if not TryGetInteger(TJSONObject(ArgumentsValue), 'id', EntityId) then
+  Exit(ErrorResponse(AId, '-32602', 'Arguments.id deve ser inteiro.'));
+Data := FServices.ConsultInvoicesByCustomer(FActor, EntityId);
+try
+  Exit(ToolResult(AId, Data));
+finally
+  Data.Free;
+end;
+```
+
+Os recortes são do código executável, mas não substituem os blocos completos
+de tratamento de erro e ciclo de vida nas units. Na suíte Delphi, a mesma
+tool é recusada sem ator (`-32003`), aceita com `operador-demo`, rejeita
+identificador `1.5`, campo `extra` e cliente inexistente, e não devolve
+`creditLimit`. A transição reproduzível é: **rotina existente → serviço Delphi
+autorizado → contrato MCP → teste de processo → pergunta no host**. O último
+passo é ilustrado em [HOST_CODEX_CLI.md](HOST_CODEX_CLI.md) com a tool de
+estoque, que não exige ator didático; a consulta de faturas exige uma fonte
+de identidade confiável antes de sair do laboratório.
+
 Use os quatro passos acima como um diff guiado: duplique o percurso para uma única consulta
 existente do seu ERP, trocando a query por uma chamada ao serviço de domínio já autorizado.
 O aceite exige conferir significado, campos, negação e processo com o responsável pelo dado.
