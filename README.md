@@ -17,7 +17,7 @@ Siga o [laboratório reproduzível](docs/QUICKSTART.md). Ele informa pré-requis
 compilação, testes, validação com um cliente MCP independente e diagnóstico de falhas comuns.
 Para construir a solução a partir de um projeto Console vazio, use
 [o roteiro do zero](docs/CONSTRUIR_DO_ZERO.md).
-Para levar uma consulta ao seu sistema, use [o roteiro de adaptação](docs/ADAPTAR_AO_ERP.md).
+Para levar uma consulta ao seu sistema, use [o roteiro de adaptação](docs/ADAPTAR_AO_ERP.md), veja a [extração completa de um evento VCL](docs/EXTRAIR_EVENTO_VCL.md) e comece pelo [projeto-modelo neutro](starter/erp-mcp-starter/README.md).
 
 ## Versões correspondentes às edições do livro
 
