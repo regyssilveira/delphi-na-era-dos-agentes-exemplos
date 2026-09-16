@@ -84,6 +84,26 @@ Use os quatro passos acima como um diff guiado: duplique o percurso para uma ún
 existente do seu ERP, trocando a query por uma chamada ao serviço de domínio já autorizado.
 O aceite exige conferir significado, campos, negação e processo com o responsável pelo dado.
 
+## Cartão de substituição com pontos de verificação
+
+Antes de abrir o ERP próprio, execute `tests/TechStore.Mcp.Tests.dpr` na tag da
+edição. Localize as chamadas `Request(14,` a `Request(19,`:
+
+| Ponto | Evidência do exemplo que deve passar | Substituição no seu ERP |
+| --- | --- | --- |
+| Serviço | `ConsultInvoicesByCustomer` consulta cliente e faturas sem JSON-RPC | Chame o serviço de leitura já autorizado; teste diretamente resultado conhecido, ausência e acesso negado. |
+| Contrato | `tools/list` publica `id` inteiro; `Request(17,` e `Request(18,` recusam decimal e campo extra com `-32602` | Publique nome e schema da pergunta escolhida; mantenha uma recusa por tipo e outra por campo inesperado. |
+| Resultado | `Request(15,` retorna fatura `8450` sem `creditLimit`; `Request(14,` nega acesso sem ator com `-32003` | Compare somente campos permitidos, resultado real de homologação e negação por identidade/escopo verificáveis. |
+| Processo/host | A suíte de processo verifica UTF-8 e canais; o Inspector chama `consultar_estoque_baixo` | Acrescente a nova tool ao teste de processo; depois faça a mesma pergunta no host escolhido e registre versão, política e resposta. |
+
+No código do ERP, substitua **a fonte de dados e a política demonstrativa**
+antes de apontar o host para homologação. Não copie
+`TECHSTORE_DEMO_ACTOR` como autenticação. Quando a nova consulta for
+compilada, rode os casos na ordem serviço → contrato → processo → host;
+registre para cada ponto o comando/teste executado, o resultado observado
+e quem confirmou o significado do dado. Esse cartão é um modelo de
+adaptação, não uma alegação de que o repositório público já contém o seu ERP.
+
 Este roteiro é para uma integração local em homologação. Escolha uma consulta de baixo risco que
 já exista em um serviço Delphi do seu ERP. O exemplo usa `consultar_produto`; troque nome,
 campos e serviço conforme o seu domínio. Não conecte o banco de produção durante esta etapa.

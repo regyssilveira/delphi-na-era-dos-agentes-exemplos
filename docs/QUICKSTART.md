@@ -16,18 +16,27 @@ laboratório, deixe a unit de ligação estática do SQLite configurada como est
 
 ## Compilar e testar
 
-Abra `src/TechStoreERP.dpr` no Delphi e compile para a plataforma desejada. Em um Prompt de
-Comando do Desenvolvedor, a mesma compilação pode ser feita assim:
+Abra `src/TechStoreERP.dpr` no Delphi 13 e compile para Win64. Se preferir
+a linha de comando, **não confie apenas no `dcc64` do PATH**: em máquinas
+com várias versões ele pode chamar um Delphi antigo. No Windows, localize
+`dcc64.exe` na pasta `Embarcadero\Studio\37.0\bin` da sua instalação do
+Delphi 13 Florence; ajuste o caminho abaixo. O cabeçalho da compilação
+deve informar `compiler version 37.0`.
 
 ```bat
+set "DCC64=C:\Program Files (x86)\Embarcadero\Studio\37.0\bin\dcc64.exe"
 cd src
-dcc64 -B TechStoreERP.dpr
+"%DCC64%" -B TechStoreERP.dpr
 cd ..\tests
-dcc64 -B TechStore.Mcp.Tests.dpr
+"%DCC64%" -B TechStore.Mcp.Tests.dpr
 TechStore.Mcp.Tests.exe
-dcc64 -B TechStore.Mcp.Process.Tests.dpr
+"%DCC64%" -B TechStore.Mcp.Process.Tests.dpr
 TechStore.Mcp.Process.Tests.exe
 ```
+
+Se o compilador não for encontrado, confira o diretório da instalação.
+`where dcc64` revela qual executável o PATH chamaria, mas não substitui
+a conferência do cabeçalho `37.0`.
 
 Os testes devem terminar com `Todos os testes MCP passaram.` e
 `Teste de processo MCP e UTF-8 passou.`. O segundo programa inicia o executável por pipes,
@@ -85,6 +94,7 @@ argumentos. O processo é local e deve ser encerrado pelo host ao fechar o fluxo
 | Sintoma | Verificação |
 | --- | --- |
 | O host não encontra o executável | Use caminho absoluto e confirme a plataforma Win32/Win64. |
+| O projeto compila com uma versão inesperada | Confira o cabeçalho `compiler version 37.0` e selecione o executável do Delphi 13 explicitamente. |
 | O banco não abre | Execute o binário uma vez sem argumentos e confira a pasta Documentos. |
 | O host acusa versão inválida | Confirme se ele fala MCP `2026-07-28` ou `2025-11-25` e se iniciou o executável atualizado. |
 | JSON inválido no host | Garanta UTF-8, uma mensagem JSON-RPC por linha e nenhum log em `stdout`. |
