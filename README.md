@@ -15,6 +15,8 @@ O repositório demonstrará uma camada de negócio que pode ser exposta com segu
 
 Siga o [laboratório reproduzível](docs/QUICKSTART.md). Ele informa pré-requisitos,
 compilação, testes, validação com um cliente MCP independente e diagnóstico de falhas comuns.
+Para construir a solução a partir de um projeto Console vazio, use
+[o roteiro do zero](docs/CONSTRUIR_DO_ZERO.md).
 Para levar uma consulta ao seu sistema, use [o roteiro de adaptação](docs/ADAPTAR_AO_ERP.md).
 
 ## Versões correspondentes às edições do livro

@@ -1,6 +1,6 @@
 # Teste ponta a ponta com um host de IA: Codex CLI
 
-Este teste foi executado no Windows em 15/09/2026 com Codex CLI `0.147.0`,
+Este teste foi executado no Windows em 15/09/2026 e ampliado em 16/09/2026 com Codex CLI `0.147.0`,
 Delphi 13 Florence e o executável `src/TechStoreERP.exe` deste repositório.
 Ele usa somente dados fictícios. O Codex CLI é um **host opcional**, não uma
 dependência do servidor Delphi nem uma exigência para acompanhar o livro.
@@ -67,3 +67,30 @@ isso não é uma resposta de estoque nem prova de incompatibilidade do protocolo
 
 Não coloque credenciais, banco corporativo ou tool de confirmação nesse
 experimento. O servidor continua sendo um laboratório `stdio` local.
+
+## Conversa composta verificada
+
+Uma segunda execução validou a composição de quatro tools. Use outro banco temporário ou apague
+somente o banco descartável do teste antes de repetir, para que o identificador do orçamento seja
+previsível. Substitua o texto final do comando anterior por:
+
+```text
+Use somente as ferramentas MCP do servidor techstore e não execute comandos de shell. Primeiro
+consulte os produtos abaixo do estoque mínimo. Depois consulte o cliente 1 e o produto 2. Por
+fim, prepare um orçamento para o cliente 1, produto 2, quantidade 20. Na resposta, separe
+claramente dados retornados pelo ERP de sua interpretação e informe se alguma operação foi
+confirmada.
+```
+
+O host chamou, nesta ordem, `consultar_estoque_baixo`, `consultar_cliente`,
+`consultar_produto` e `criar_orcamento`. Os fatos retornados foram:
+
+- Mouse Orbital: saldo 3, mínimo 10;
+- Notebook Atlas 14: saldo 2, mínimo 5;
+- SSD Aurora 1 TB: saldo 1, mínimo 8;
+- cliente 1: Ana Martins, limite de crédito 15.000;
+- orçamento 1: Mouse Orbital, quantidade 20, `PREPARADO`, aprovação humana exigida.
+
+O host interpretou que a quantidade excedia o saldo em 17 unidades e declarou corretamente que
+nenhuma operação foi confirmada. Essa subtração é inferência do modelo; os demais valores são
+dados das tools. O número do orçamento pode mudar quando o mesmo banco já contém rascunhos.

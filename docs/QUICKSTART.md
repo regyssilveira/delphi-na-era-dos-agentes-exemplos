@@ -3,6 +3,9 @@
 Este roteiro produz uma integração MCP local e verificável. Ele não configura um ERP real, não
 abre portas de rede e não usa credenciais.
 
+Se você quiser montar o projeto a partir de uma Console Application vazia, siga primeiro
+[CONSTRUIR_DO_ZERO.md](CONSTRUIR_DO_ZERO.md). Este QUICKSTART presume o código já obtido.
+
 ## Requisitos
 
 - Windows 10 ou posterior;

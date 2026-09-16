@@ -14,6 +14,7 @@ Este repositório é o código executável de **Delphi na Era dos Agentes**. A m
 | Política demonstrativa | `TechStore.Authorization.pas` bloqueia confirmação crítica e nega faturas sem ator demonstrativo; não verifica identidade real |
 | Testes reproduzíveis | `tests/TechStore.Mcp.Tests.dpr` e `tests/TechStore.Mcp.Process.Tests.dpr` |
 | Adaptação a um ERP existente | `docs/ADAPTAR_AO_ERP.md` e Laboratório 6 do livro |
+| Construção do MVP desde um projeto vazio | `docs/CONSTRUIR_DO_ZERO.md` e Apêndice Q do livro |
 
 ## Contratos de evolução, ainda não implementados
 
