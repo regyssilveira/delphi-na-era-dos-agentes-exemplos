@@ -46,6 +46,7 @@ implementation
 
 uses
   System.SysUtils,
+  System.Generics.Collections,
   TechStore.Authorization;
 
 const

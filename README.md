@@ -22,16 +22,16 @@ Para levar uma consulta ao seu sistema, use [o roteiro de adaptação](docs/ADAP
 ## Versões correspondentes às edições do livro
 
 A 1ª edição do livro corresponde à release identificada como
-`livro-1edicao-2026-exemplos-r4`. Para reproduzir os exercícios exatamente como
+`livro-1edicao-2026-exemplos-r5`. Para reproduzir os exercícios exatamente como
 publicados, clone o repositório e selecione essa versão antes de compilar:
 
 ```bash
-git checkout livro-1edicao-2026-exemplos-r4
+git checkout livro-1edicao-2026-exemplos-r5
 ```
 
 O ramo `main` contém a evolução mais recente e pode divergir das páginas
 impressas. O histórico técnico da revisão está em
-[`docs/RELEASE_NOTES_R4.md`](docs/RELEASE_NOTES_R4.md). Versões publicadas não
+[`docs/RELEASE_NOTES_R5.md`](docs/RELEASE_NOTES_R5.md). Versões publicadas não
 devem ser alteradas silenciosamente; uma correção futura receberá nova identificação.
 
 ## Estado atual

@@ -26,7 +26,7 @@ ficam como **não verificadas**, mesmo quando anunciam suporte a MCP.
 | Cliente Delphi do exemplo | Checkout desta edição, Windows/Delphi 13 | `2026-07-28`, chamada em memória | `server/discover`, `tools/list`, `tools/call` | Passou na suíte Delphi em 15/09/2026 | Não inicia processo nem representa um host de IA |
 | Teste Delphi de processo | Checkout desta edição, Windows/Delphi 13 | `2026-07-28`, `stdio` | Processo filho, UTF-8, `stdout`/`stderr`, fechamento | Passou em 15/09/2026 | Não avalia decisão de agente |
 | MCP Inspector CLI | Execução documentada no QUICKSTART | Perfil negociado pelo Inspector, `stdio` | `tools/list`, `tools/call` | Passou no recorte documentado | Não prova conformidade completa ou todos os hosts |
-| Codex CLI | `0.147.0`, Windows, 15/09/2026 | Perfil negociado pelo host, `stdio` | Uma chamada a `consultar_estoque_baixo` | Passou com banco fictício isolado e acesso local amplo | Sandbox `read-only` descobriu a tool, mas cancelou a chamada; ver HOST_CODEX_CLI.md |
+| Codex CLI | `0.147.0`, Windows, 15–16/09/2026 | Perfil negociado pelo host, `stdio` | Consulta isolada e conversa composta com quatro tools | Passou com banco fictício isolado e acesso local amplo | Sandbox `read-only` descobriu a tool, mas cancelou a chamada; ver HOST_CODEX_CLI.md |
 | Outros hosts | Não verificados | Não verificado | Nenhum | Sem alegação | Validar versão, descoberta, chamada, política e efeitos antes de usar dados reais |
 
 Não inferimos o perfil efetivamente escolhido pelo Codex CLI apenas da chamada
