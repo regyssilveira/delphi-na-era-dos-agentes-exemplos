@@ -5,6 +5,7 @@
 uses
   System.SysUtils,
   System.IOUtils,
+  System.JSON,
   TechStore.Data in '..\src\TechStore.Data.pas',
   TechStore.Services in '..\src\TechStore.Services.pas',
   TechStore.Authorization in '..\src\TechStore.Authorization.pas',
@@ -50,6 +51,7 @@ var
   Services: TTechStoreServices;
   Authorization: TTechStoreAuthorization;
   Response: string;
+  ProductSnapshot: TJSONObject;
   DatabaseFileName: string;
   TestId: TGUID;
 begin
@@ -123,12 +125,36 @@ begin
       Response := Server.ProcessLine(Request(8, 'tools/call',
         '"name":"consultar_produto","arguments":{"id":2.5}'));
       RequireContains(Response, '"code":-32602');
+      Response := Server.ProcessLine(Request(21, 'tools/call',
+        '"name":"consultar_produto","arguments":{"id":2}'));
+      RequireContains(Response, 'Mouse Orbital');
+      RequireContains(Response, '"stockQuantity":3');
+      RequireContains(Response, '"minimumStock":10');
+      Response := Server.ProcessLine(Request(22, 'tools/call',
+        '"name":"tool_inexistente","arguments":{}'));
+      RequireContains(Response, '"code":-32601');
 
       Response := Server.ProcessLine(Request(9, 'tools/call',
         '"name":"criar_orcamento","arguments":{' +
         '"customerId":1,"productId":2,"quantity":20}'));
       RequireContains(Response, 'PREPARADO');
       RequireContains(Response, 'requiresHumanApproval');
+      ProductSnapshot := Database.FindProductById(2);
+      try
+        RequireContains(ProductSnapshot.ToJSON, '"stockQuantity":3');
+      finally
+        ProductSnapshot.Free;
+      end;
+      Response := Server.ProcessLine(Request(20, 'tools/call',
+        '"name":"criar_orcamento","arguments":{' +
+        '"customerId":1,"productId":2,"quantity":0}'));
+      RequireContains(Response, '"code":-32602');
+      ProductSnapshot := Database.FindProductById(2);
+      try
+        RequireContains(ProductSnapshot.ToJSON, '"stockQuantity":3');
+      finally
+        ProductSnapshot.Free;
+      end;
 
       Response := Server.ProcessLine(Request(14, 'tools/call',
         '"name":"consultar_faturas_cliente","arguments":{"id":1}'));
