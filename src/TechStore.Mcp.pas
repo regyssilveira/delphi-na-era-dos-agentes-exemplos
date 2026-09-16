@@ -190,7 +190,6 @@ begin
   Result := CompleteResponse(AId,
     '"supportedVersions":["' + McpProtocolVersion + '"],' +
     '"capabilities":{"tools":{},"resources":{},"prompts":{}},' +
-    '"serverInfo":{"name":"techstore-erp","version":"' + ServerVersion + '"},' +
     '"instructions":"Servidor MCP local do TechStore. Use somente dados fictícios; ' +
     'criar_orcamento prepara uma minuta e não confirma operações.",' +
     '"ttlMs":300000,"cacheScope":"public"');

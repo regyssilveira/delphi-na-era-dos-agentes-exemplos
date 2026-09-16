@@ -2,6 +2,10 @@
 
 O servidor fixa o perfil `2026-07-28`. A versão não deve ser trocada apenas no texto de uma
 mensagem: ela define o ciclo de vida, os metadados por requisição e a forma de descoberta.
+Na revisão final dessa versão, `server/discover` não traz `serverInfo` diretamente no
+resultado: a identidade do servidor fica em `result._meta['io.modelcontextprotocol/serverInfo']`
+e é enviada nas demais respostas modernas. O perfil legado conserva `serverInfo` no
+resultado de `initialize`. Uma amostra de uma revisão preliminar não substitui o schema final.
 
 Ao avaliar uma nova revisão:
 

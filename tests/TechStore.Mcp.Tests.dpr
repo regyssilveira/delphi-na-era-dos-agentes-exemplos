@@ -101,11 +101,16 @@ begin
       Response := Server.ProcessLine(Request(3, 'server/discover', ''));
       RequireContains(Response, '"supportedVersions":["2026-07-28"]');
       RequireContains(Response, '"resultType":"complete"');
-      RequireContains(Response, '"serverInfo":{"name":"techstore-erp"');
+      RequireContains(Response,
+        '"_meta":{"io.modelcontextprotocol/serverInfo":{"name":"techstore-erp"');
+      Require(not Response.Contains('"serverInfo":{"name":"techstore-erp"'),
+        'serverInfo não deve aparecer no corpo da descoberta moderna.');
 
       Response := Server.ProcessLine(Request(4, 'tools/list', ''));
       RequireContains(Response, '"consultar_estoque_baixo"');
       RequireContains(Response, '"ttlMs":300000');
+      RequireContains(Response,
+        '"_meta":{"io.modelcontextprotocol/serverInfo":{"name":"techstore-erp"');
 
       Response := Server.ProcessLine(Request(5, 'tools/call',
         '"name":"consultar_estoque_baixo","arguments":{}'));
