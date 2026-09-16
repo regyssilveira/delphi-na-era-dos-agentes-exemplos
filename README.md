@@ -17,6 +17,21 @@ Siga o [laboratório reproduzível](docs/QUICKSTART.md). Ele informa pré-requis
 compilação, testes, validação com um cliente MCP independente e diagnóstico de falhas comuns.
 Para levar uma consulta ao seu sistema, use [o roteiro de adaptação](docs/ADAPTAR_AO_ERP.md).
 
+## Versões correspondentes às edições do livro
+
+A 1ª edição do livro corresponde à release identificada como
+`livro-1edicao-2026-exemplos-r4`. Para reproduzir os exercícios exatamente como
+publicados, clone o repositório e selecione essa versão antes de compilar:
+
+```bash
+git checkout livro-1edicao-2026-exemplos-r4
+```
+
+O ramo `main` contém a evolução mais recente e pode divergir das páginas
+impressas. O histórico técnico da revisão está em
+[`docs/RELEASE_NOTES_R4.md`](docs/RELEASE_NOTES_R4.md). Versões publicadas não
+devem ser alteradas silenciosamente; uma correção futura receberá nova identificação.
+
 ## Estado atual
 
 O exemplo cria um banco SQLite com dados fictícios e inclui um servidor MCP nativo em Delphi
